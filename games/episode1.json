@@ -5,115 +5,65 @@
       "grade": 1,
       "subject": "Animals",
       "question": "What word describes an animal that is awake at night and sleeps during the day?",
-      "answer": "Nocturnal",
-      "classmate": {
-        "name": "Maya",
-        "answer": "Nocturnal",
-        "correct": true
-      }
+      "answer": "Nocturnal"
     },
     {
       "grade": 1,
       "subject": "Calendar",
       "question": "How many months of the year have 31 days?",
       "answer": "7",
-      "note": "January, March, May, July, August, October, December",
-      "classmate": {
-        "name": "Theo",
-        "answer": "6",
-        "correct": false
-      }
+      "note": "January, March, May, July, August, October, December"
     },
     {
       "grade": 2,
       "subject": "Grammar",
       "question": "What is the simple past tense of “drink”?",
-      "answer": "Drank",
-      "classmate": {
-        "name": "Priya",
-        "answer": "Drank",
-        "correct": true
-      }
+      "answer": "Drank"
     },
     {
       "grade": 2,
       "subject": "Life Science",
       "question": "What is the word for the process a caterpillar goes through to become a butterfly?",
-      "answer": "Metamorphosis",
-      "classmate": {
-        "name": "Jonah",
-        "answer": "Metamorphosis",
-        "correct": true
-      }
+      "answer": "Metamorphosis"
     },
     {
       "grade": 3,
       "subject": "Time",
       "question": "How many minutes are in 3½ hours?",
-      "answer": "210",
-      "classmate": {
-        "name": "Lucy",
-        "answer": "210",
-        "correct": true
-      }
+      "answer": "210"
     },
     {
       "grade": 3,
       "subject": "U.S. Geography",
       "question": "Which U.S. state borders exactly one other state?",
       "answer": "Maine",
-      "note": "Maine borders only New Hampshire. Alaska borders no other state.",
-      "classmate": {
-        "name": "Maya",
-        "answer": "Alaska",
-        "correct": false
-      }
+      "note": "Maine borders only New Hampshire. Alaska borders no other state."
     },
     {
       "grade": 4,
       "subject": "World Geography",
       "question": "What is the capital of Canada?",
-      "answer": "Ottawa",
-      "classmate": {
-        "name": "Priya",
-        "answer": "Toronto",
-        "correct": false
-      }
+      "answer": "Ottawa"
     },
     {
       "grade": 4,
       "subject": "Earth Science",
       "question": "Name the three main types of rock.",
       "answer": "Igneous, sedimentary and metamorphic",
-      "note": "All three needed.",
-      "classmate": {
-        "name": "Theo",
-        "answer": "Igneous, sedimentary and metamorphic",
-        "correct": true
-      }
+      "note": "All three needed."
     },
     {
       "grade": 5,
       "subject": "Parts of Speech",
       "question": "What part of speech are words like “and,” “but” and “or”?",
       "answer": "Conjunctions",
-      "note": "Also accept: coordinating conjunctions",
-      "classmate": {
-        "name": "Jonah",
-        "answer": "Conjunctions",
-        "correct": true
-      }
+      "note": "Also accept: coordinating conjunctions"
     },
     {
       "grade": 5,
       "subject": "U.S. History",
       "question": "Who was president during the War of 1812?",
-      "answer": "James Madison",
-      "classmate": {
-        "name": "Lucy",
-        "answer": "James Madison",
-        "correct": true
-      }
+      "answer": "James Madison"
     }
   ],
   "million": {

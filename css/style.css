@@ -700,21 +700,6 @@ audio.media {
   color: var(--ink-soft);
 }
 
-.classmate {
-  margin-top: 0.4rem;
-  font-size: 1rem;
-  border-top: 2px dashed rgba(0, 0, 0, 0.15);
-  padding-top: 0.4rem;
-}
-
-.classmate.right {
-  color: #1d7a3a;
-}
-
-.classmate.wrong {
-  color: var(--red-dark);
-}
-
 /* Player chips on the question screen */
 .chips {
   display: grid;
@@ -731,6 +716,27 @@ audio.media {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+}
+
+.chip.classmate-chip {
+  background: var(--yellow);
+}
+
+.classmate-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-family: "Fredoka", sans-serif;
+  font-weight: 600;
+}
+
+.classmate-field input {
+  font: inherit;
+  font-weight: 500;
+  font-size: 1rem;
+  padding: 0.5em 0.9em;
+  border-radius: 12px;
+  border: 2px solid rgba(31, 36, 48, 0.35);
 }
 
 .chip.bystander {
@@ -990,16 +996,6 @@ audio.media {
 
 .overlay-card .eyebrow {
   color: var(--red-dark);
-}
-
-.peek-eyes {
-  font-size: 4rem;
-}
-
-.peek-answer {
-  font-family: "Patrick Hand", cursive;
-  font-size: 4rem;
-  line-height: 1.1;
 }
 
 .flunk-f {

@@ -7,13 +7,14 @@ The site republishes itself on GitHub Pages whenever you change a file on the `m
 ## How a game works
 
 - Add the players, then pick any subject on the board. Each player writes down an answer (paper, whiteboards, phones — whatever you like).
-- Press **Space** for pencils down. The answer appears, along with what the 5th-grade classmate wrote.
-- Mark each player ✓ or ✗ (or use **Everyone ✓ / ✗**), then press **Space** to continue.
+- One person in the room plays the 5th-grade classmate. They answer every question too, but don't score. You can enter their name on the setup screen.
+- Press **Space** for pencils down and the answer appears.
+- Mark each player ✓ or ✗ (or use **Everyone ✓ / ✗**), then press **Space** to continue. If someone used Copy, or used Save and got it wrong, a yellow classmate card appears so you can mark the classmate too.
 - Every right answer moves a player up the money ladder: $1,000 → $2,000 → $5,000 → $10,000 → **$25,000 (guaranteed)** → $50,000 → $100,000 → $175,000 → $300,000 → $500,000.
 - One wrong answer and you flunk out — with $25,000 if you'd reached it, otherwise nothing — and you have to say "I am not smarter than a 5th grader!"
 - After seeing a question, a player can **drop out** and keep what they've banked.
-- Each player gets one of each cheat, one per question:
-  - **Peek** — the screen tells everyone else to look away, then shows that player the classmate's answer
+- Each player gets one of each cheat, one per question. Click the cheat on their card before you reveal the answer:
+  - **Peek** — the player looks at the classmate's answer, then writes their own
   - **Copy** — the player is locked into the classmate's answer, right or wrong
   - **Save** — if the player is wrong but the classmate is right, they're saved
 - Anyone who survives all 10 sees the subject of the **$1,000,000 question** and decides: go for it (no cheats; wrong means $25,000) or walk away with $500,000.
@@ -44,7 +45,7 @@ An episode has 10 questions (two per grade, 1st through 5th) and a million-dolla
       "subject": "U.S. Geography",
       "question": "Which U.S. state borders exactly one other state?",
       "answer": "Maine",
-      "classmate": { "name": "Maya", "answer": "Alaska", "correct": false }
+      "note": "Maine borders only New Hampshire. Alaska borders no other state."
     }
   ],
   "million": {
@@ -62,7 +63,6 @@ An episode has 10 questions (two per grade, 1st through 5th) and a million-dolla
 | `question`, `answer` | What's shown, and what's revealed |
 | `choices` | Optional list for multiple choice or true/false, e.g. `["True", "False"]`. Write `answer` exactly as it appears in the list so it highlights |
 | `note` | Optional small print under the answer, e.g. `"All three needed."` |
-| `classmate` | The 5th grader's answer used by Peek, Copy and Save. Set `correct` to `false` to make them wrong — that's what makes the cheats a gamble |
 
 Questions can have any number of entries and the board grows to fit, though the money ladder is built for 10. Leave out `million` to skip the million-dollar round.
 
@@ -89,8 +89,7 @@ Upload the file into the `media/` folder, then point to it from the question:
   "subject": "Animals",
   "question": "What animal is this?",
   "image": "media/axolotl.jpg",
-  "answer": "An axolotl",
-  "classmate": { "name": "Lucy", "answer": "A salamander", "correct": false }
+  "answer": "An axolotl"
 }
 ```
 

@@ -10,11 +10,12 @@ const SAFE_LEVEL = 5; // after 5 correct answers, $25,000 is guaranteed
 const SAFE_AMOUNT = 25000;
 const WALK_AWAY_AMOUNT = 500000; // what you keep if you skip the million question
 const CHEATS = {
-  peek: { label: "Peek", icon: "👀", tip: "Secretly see your classmate's answer" },
-  copy: { label: "Copy", icon: "📝", tip: "Lock in your classmate's answer" },
-  save: { label: "Save", icon: "🛟", tip: "If you're wrong but your classmate is right, you're saved" },
+  peek: { label: "Peek", icon: "👀", tip: "Look at the classmate's answer, then write your own" },
+  copy: { label: "Copy", icon: "📝", tip: "Lock in the classmate's answer, right or wrong" },
+  save: { label: "Save", icon: "🛟", tip: "If you're wrong but the classmate is right, you're saved" },
 };
 const STORE_KEY = "smarter5th.state.v1";
+const CLASSMATE = "__classmate"; // key for the classmate's mark on each question
 
 // ---------------------------------------------------------------------------
 // State
@@ -30,6 +31,7 @@ function freshState() {
     game: null,
     gameId: null,
     players: [],
+    classmate: "", // name of the person in the room playing the 5th grader
     used: [],
     asked: 0,
     current: null,
@@ -99,17 +101,35 @@ function playerIsLive(p) {
   return !c.drops.includes(p.id);
 }
 
+const mateName = () => (state.classmate || "").trim() || "the classmate";
+
+// The classmate only needs marking when it decides someone's result:
+// a Copy, or a Save by a player who was marked wrong.
+function needsClassmate() {
+  const c = state.current;
+  return participants().some((p) => {
+    if (!playerIsLive(p)) return false;
+    const cheat = c.cheats[p.id];
+    return cheat === "copy" || (cheat === "save" && c.marks[p.id] === false);
+  });
+}
+
 // The result that counts for a live player, after cheats.
 function liveResult(p) {
   const c = state.current;
-  const q = currentQuestion();
-  const mate = q.classmate;
   const cheat = c.cheats[p.id];
-  if (cheat === "copy" && mate) return !!mate.correct;
+  const mate = c.marks[CLASSMATE];
+  if (cheat === "copy") return mate;
   const mark = c.marks[p.id];
   if (mark === undefined) return undefined;
-  if (!mark && cheat === "save" && mate && mate.correct) return true;
+  if (!mark && cheat === "save") return mate === undefined ? undefined : mate;
   return mark;
+}
+
+function allMarked() {
+  const c = state.current;
+  if (needsClassmate() && c.marks[CLASSMATE] === undefined) return false;
+  return participants().every((p) => (playerIsLive(p) ? liveResult(p) : c.marks[p.id]) !== undefined);
 }
 
 // ---------------------------------------------------------------------------
@@ -134,7 +154,9 @@ async function loadGameById(id) {
 
 function startSetup(game, id) {
   const keepPlayers = state.players.map((p) => p.name);
+  const keepClassmate = state.classmate || "";
   state = freshState();
+  state.classmate = keepClassmate;
   state.game = game;
   state.gameId = id;
   state.used = game.questions.map(() => false);
@@ -202,8 +224,10 @@ const actions = {
   backToLoader: () => {
     stopSound();
     const keep = state.players;
+    const mate = state.classmate;
     state = freshState();
     state.players = keep;
+    state.classmate = mate;
     clearSaved();
     render();
   },
@@ -249,26 +273,15 @@ const actions = {
     const c = state.current;
     if (c.phase !== "asking" || c.kind === "million") return;
     const p = playerById(id);
-    const q = currentQuestion();
-    if (!q.classmate) {
-      alert("This question has no classmate answer, so cheats can't be used on it.");
-      return;
-    }
     if (c.cheats[id] === cheat) {
-      // Undo (except Peek, which can't be un-seen).
-      if (cheat === "peek") return;
+      // Clicking again undoes a misclick.
       p.cheats[cheat] = true;
       delete c.cheats[id];
     } else {
       if (c.cheats[id] || !p.cheats[cheat]) return; // one cheat per question
       p.cheats[cheat] = false;
       c.cheats[id] = cheat;
-      if (cheat === "peek") state.overlay = { type: "peek", id, shown: false };
     }
-    render();
-  },
-  showPeek: () => {
-    if (state.overlay?.type === "peek") state.overlay.shown = true;
     render();
   },
   closeOverlay: () => {
@@ -297,6 +310,7 @@ const actions = {
     for (const p of participants()) {
       if (!(playerIsLive(p) && c.cheats[p.id] === "copy")) c.marks[p.id] = value === "1";
     }
+    if (needsClassmate()) c.marks[CLASSMATE] = value === "1";
     playSound(value === "1" ? "correct" : "wrong");
     render();
   },
@@ -330,14 +344,6 @@ const actions = {
     clearSaved();
     startSetup(state.game, state.gameId); // same players, fresh scores
   },
-  cancelPeek: () => {
-    const o = state.overlay;
-    if (o?.type !== "peek" || o.shown) return;
-    playerById(o.id).cheats.peek = true;
-    delete state.current.cheats[o.id];
-    state.overlay = null;
-    render();
-  },
   toggleMute: () => {
     toggleMute();
     render();
@@ -349,8 +355,7 @@ function finishQuestion() {
   if (c.phase !== "revealed") return;
   const q = currentQuestion();
   const parts = participants();
-  const unmarked = parts.filter((p) => (playerIsLive(p) ? liveResult(p) : c.marks[p.id]) === undefined);
-  if (unmarked.length) return;
+  if (!allMarked()) return;
 
   const flunked = [];
   for (const p of parts) {
@@ -456,6 +461,14 @@ function render() {
       input.value = draftName;
       input.addEventListener("input", (e) => (draftName = e.target.value));
     }
+    const mate = document.getElementById("classmate-name");
+    if (mate) {
+      mate.value = state.classmate || "";
+      mate.addEventListener("input", (e) => {
+        state.classmate = e.target.value;
+        save();
+      });
+    }
   }
 }
 
@@ -512,13 +525,17 @@ function renderSetup() {
           .map((p) => `<li><span>${esc(p.name)}</span><button class="x" data-action="removePlayer" data-id="${p.id}" aria-label="Remove">×</button></li>`)
           .join("")}
       </ul>
+      <label class="classmate-field">
+        <span>🎒 Who's playing the 5th-grade classmate?</span>
+        <input id="classmate-name" placeholder="Classmate's name (optional)" autocomplete="off" maxlength="24" />
+      </label>
       <details class="rules">
         <summary>How it works</summary>
         <ul>
           <li>Pick any subject on the board. Everyone writes down an answer to every question.</li>
           <li>Each right answer moves you up the money ladder. One wrong answer and you flunk out — with ${money(SAFE_AMOUNT)} if you'd already banked it, otherwise nothing.</li>
           <li>After seeing a question you can <b>drop out</b> and keep what you've banked.</li>
-          <li>Each player gets one <b>Peek</b>, one <b>Copy</b> and one <b>Save</b> (one per question) using the 5th-grade classmate's answer.</li>
+          <li>One person in the room plays the 5th-grade classmate and answers every question too. Each player gets one <b>Peek</b> (look at the classmate's answer), one <b>Copy</b> (lock in the classmate's answer) and one <b>Save</b> (if you're wrong but the classmate is right, you're saved), one per question.</li>
           <li>Survive all ${g.questions.length} and you can go for ${money(LADDER[10])} — or walk away with ${money(WALK_AWAY_AMOUNT)}.</li>
           <li>Players who are out keep answering for bragging rights: most correct answers breaks ties.</li>
         </ul>
@@ -627,18 +644,17 @@ function renderQuestion() {
         .map((ch) => `<li class="${revealed && String(ch).trim().toLowerCase() === String(q.answer).trim().toLowerCase() ? "right" : ""}">${esc(ch)}</li>`)
         .join("")}</ol>`
     : "";
-  const mate = q.classmate;
   const answerBlock = revealed
     ? `<div class="answer">
         <div class="answer-label">Answer</div>
         <div class="answer-text">${esc(q.answer)}</div>
         ${q.note ? `<div class="answer-note">${esc(q.note)}</div>` : ""}
-        ${mate && !million ? `<div class="classmate ${mate.correct ? "right" : "wrong"}"><b>${esc(mate.name || "Classmate")}</b> wrote: “${esc(mate.answer)}” ${mate.correct ? "✓" : "✗"}</div>` : ""}
       </div>`
     : "";
 
   const parts = participants();
-  const allMarked = parts.every((p) => (playerIsLive(p) ? liveResult(p) : c.marks[p.id]) !== undefined);
+  const ready = revealed && allMarked();
+  const mateMark = c.marks[CLASSMATE];
 
   const chips = parts
     .map((p) => {
@@ -651,7 +667,7 @@ function renderQuestion() {
           const cheatBtns = Object.entries(CHEATS)
             .map(([k, v]) => {
               const active = cheat === k;
-              const disabled = dropping || (!active && (cheat || !p.cheats[k])) || !mate;
+              const disabled = dropping || (!active && (cheat || !p.cheats[k]));
               return `<button class="chip-btn ${active ? "active" : ""}" title="${v.tip}" data-action="useCheat" data-id="${p.id}" data-cheat="${k}" ${disabled ? "disabled" : ""}>${v.icon} ${v.label}</button>`;
             })
             .join("");
@@ -663,12 +679,14 @@ function renderQuestion() {
         }
       } else {
         const result = isLive ? liveResult(p) : c.marks[p.id];
-        if (isLive && cheat === "copy" && mate) {
-          controls = `<span class="chip-note">copied ${esc(mate.name || "classmate")} → ${result ? "✓ right" : "✗ wrong"}</span>`;
+        if (isLive && cheat === "copy") {
+          controls = `<span class="chip-note">copied ${esc(mateName())} → ${result === undefined ? "mark the classmate" : result ? "✓ right" : "✗ wrong"}</span>`;
         } else {
           const savedNote =
             isLive && cheat === "save" && c.marks[p.id] === false
-              ? mate && mate.correct
+              ? mateMark === undefined
+                ? `<span class="chip-note">🛟 mark the classmate</span>`
+                : mateMark
                 ? `<span class="chip-note saved">🛟 saved!</span>`
                 : `<span class="chip-note">🛟 save failed</span>`
               : "";
@@ -685,6 +703,18 @@ function renderQuestion() {
     })
     .join("");
 
+  const mateChip =
+    revealed && needsClassmate()
+      ? `<div class="chip classmate-chip">
+          <div class="chip-head"><span class="chip-name">🎒 ${esc((state.classmate || "").trim() || "Classmate")}</span><span class="tag">5th grader</span></div>
+          <div class="chip-controls">
+            <button class="mark yes ${mateMark === true ? "on" : ""}" data-action="mark" data-id="${CLASSMATE}" data-value="1" aria-label="Classmate correct">✓</button>
+            <button class="mark no ${mateMark === false ? "on" : ""}" data-action="mark" data-id="${CLASSMATE}" data-value="0" aria-label="Classmate wrong">✗</button>
+            <span class="chip-note small">for Copy &amp; Save</span>
+          </div>
+        </div>`
+      : "";
+
   return `<main class="screen question ${million ? "million" : ""}">
     <header class="q-header">
       <div class="q-title">${header}</div>
@@ -696,7 +726,7 @@ function renderQuestion() {
       ${renderMedia(q, revealed)}
       ${answerBlock}
     </section>
-    ${done ? "" : `<section class="chips">${chips}</section>
+    ${done ? "" : `<section class="chips">${mateChip}${chips}</section>
     <footer class="q-footer">
       ${!revealed && !million ? `<button class="btn btn-ghost" data-action="backToBoard">← Board (Esc)</button>` : "<span></span>"}
       ${
@@ -704,7 +734,7 @@ function renderQuestion() {
           ? `<div class="row">
               <button class="btn btn-ghost small" data-action="markAll" data-value="1">Everyone ✓</button>
               <button class="btn btn-ghost small" data-action="markAll" data-value="0">Everyone ✗</button>
-              <button class="btn btn-red" data-action="continue" ${allMarked ? "" : "disabled"}>${allMarked ? "Continue (Space)" : "Mark everyone"}</button>
+              <button class="btn btn-red" data-action="continue" ${ready ? "" : "disabled"}>${ready ? "Continue (Space)" : "Mark everyone"}</button>
             </div>`
           : `<button class="btn btn-yellow" data-action="reveal">Pencils down — reveal (Space)</button>`
       }
@@ -773,24 +803,6 @@ function renderResults() {
 function renderOverlay() {
   const o = state.overlay;
   if (!o) return "";
-  if (o.type === "peek") {
-    const p = playerById(o.id);
-    const mate = currentQuestion().classmate;
-    return `<div class="overlay">
-      <div class="overlay-card">
-        ${
-          o.shown
-            ? `<p class="eyebrow">${esc(mate.name || "Your classmate")} wrote</p>
-               <div class="peek-answer">${esc(mate.answer)}</div>
-               <button class="btn btn-red" data-action="closeOverlay">Hide it</button>`
-            : `<div class="peek-eyes">👀</div>
-               <h2>Everyone except ${esc(p.name)}, look away!</h2>
-               <button class="btn btn-yellow" data-action="showPeek">Show ${esc(p.name)}</button>
-               <button class="btn btn-ghost small" data-action="cancelPeek">Never mind</button>`
-        }
-      </div>
-    </div>`;
-  }
   if (o.type === "flunk") {
     const n = o.names.map(esc);
     const names = n.length > 1 ? `${n.slice(0, -1).join(", ")} & ${n[n.length - 1]}` : n[0];
@@ -843,8 +855,7 @@ document.addEventListener("keydown", (e) => {
     return;
   }
   if (e.key === "Escape") {
-    if (state.overlay?.type === "peek") state.overlay.shown ? actions.closeOverlay() : actions.cancelPeek();
-    else if (state.screen === "question") actions.backToBoard();
+    if (state.screen === "question") actions.backToBoard();
     return;
   }
   if (e.key === " " || e.key === "Enter") {
@@ -852,7 +863,6 @@ document.addEventListener("keydown", (e) => {
     e.preventDefault();
     const o = state.overlay;
     if (o?.type === "flunk") return actions.closeOverlay();
-    if (o?.type === "peek") return o.shown ? actions.closeOverlay() : actions.showPeek();
     if (state.screen === "setup") return actions.startGame();
     if (state.screen === "question") return state.current.phase === "asking" ? actions.reveal() : actions.continue();
     if (state.screen === "millionIntro") return actions.startMillion();
