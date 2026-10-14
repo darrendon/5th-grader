@@ -1,0 +1,33 @@
+# Publishes the site to GitHub Pages on every push to main. There's no build
+# step: the files in this repo are the site.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check the game files are valid JSON
+        run: for f in games/*.json; do python3 -m json.tool "$f" > /dev/null || { echo "::error file=$f::$f is not valid JSON"; exit 1; }; done
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,131 @@
+{
+  "title": "Episode 1",
+  "questions": [
+    {
+      "grade": 1,
+      "subject": "Spelling",
+      "question": "Spell the word “because.”",
+      "answer": "B-E-C-A-U-S-E",
+      "classmate": {
+        "name": "Maya",
+        "answer": "B-E-C-A-U-S-E",
+        "correct": true
+      }
+    },
+    {
+      "grade": 1,
+      "subject": "Science",
+      "question": "How many legs does an insect have?",
+      "answer": "6",
+      "classmate": {
+        "name": "Theo",
+        "answer": "6",
+        "correct": true
+      }
+    },
+    {
+      "grade": 2,
+      "subject": "Math",
+      "question": "What number comes next? 2, 5, 8, 11, ___",
+      "answer": "14",
+      "classmate": {
+        "name": "Priya",
+        "answer": "14",
+        "correct": true
+      }
+    },
+    {
+      "grade": 2,
+      "subject": "Grammar",
+      "question": "What is the plural of “mouse”?",
+      "answer": "Mice",
+      "classmate": {
+        "name": "Jonah",
+        "answer": "Mouses",
+        "correct": false
+      }
+    },
+    {
+      "grade": 3,
+      "subject": "Geography",
+      "question": "Which is the largest ocean on Earth?",
+      "choices": [
+        "Atlantic",
+        "Indian",
+        "Pacific",
+        "Arctic"
+      ],
+      "answer": "Pacific",
+      "classmate": {
+        "name": "Lucy",
+        "answer": "Pacific",
+        "correct": true
+      }
+    },
+    {
+      "grade": 3,
+      "subject": "Multiplication",
+      "question": "What is 9 × 7?",
+      "answer": "63",
+      "classmate": {
+        "name": "Maya",
+        "answer": "63",
+        "correct": true
+      }
+    },
+    {
+      "grade": 4,
+      "subject": "Science",
+      "question": "True or false: Sound travels faster than light.",
+      "choices": [
+        "True",
+        "False"
+      ],
+      "answer": "False",
+      "classmate": {
+        "name": "Theo",
+        "answer": "False",
+        "correct": true
+      }
+    },
+    {
+      "grade": 4,
+      "subject": "U.S. History",
+      "question": "What document, approved in 1776, announced that the American colonies were breaking away from Great Britain?",
+      "answer": "The Declaration of Independence",
+      "classmate": {
+        "name": "Priya",
+        "answer": "The Declaration of Independence",
+        "correct": true
+      }
+    },
+    {
+      "grade": 5,
+      "subject": "Math",
+      "question": "A box is 4 cm long, 3 cm wide and 5 cm tall. What is its volume?",
+      "answer": "60 cubic centimeters",
+      "note": "Also accept: 60 cm³",
+      "classmate": {
+        "name": "Jonah",
+        "answer": "60 cubic centimeters",
+        "correct": true
+      }
+    },
+    {
+      "grade": 5,
+      "subject": "Life Science",
+      "question": "What gas do plants take in from the air to make their own food?",
+      "answer": "Carbon dioxide",
+      "classmate": {
+        "name": "Lucy",
+        "answer": "Oxygen",
+        "correct": false
+      }
+    }
+  ],
+  "million": {
+    "subject": "5th Grade U.S. History",
+    "question": "In what year did the Pilgrims land at Plymouth aboard the Mayflower?",
+    "answer": "1620"
+  }
+}
