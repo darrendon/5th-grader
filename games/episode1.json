@@ -94,12 +94,13 @@
     },
     {
       "grade": 5,
-      "subject": "Decimals",
-      "question": "What is 2.4 ÷ 0.3?",
-      "answer": "8",
+      "subject": "Parts of Speech",
+      "question": "What part of speech are words like “and,” “but” and “or”?",
+      "answer": "Conjunctions",
+      "note": "Also accept: coordinating conjunctions",
       "classmate": {
         "name": "Jonah",
-        "answer": "8",
+        "answer": "Conjunctions",
         "correct": true
       }
     },
