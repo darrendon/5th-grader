@@ -71,6 +71,17 @@
     },
     {
       "grade": 4,
+      "subject": "World Geography",
+      "question": "What is the capital of Canada?",
+      "answer": "Ottawa",
+      "classmate": {
+        "name": "Priya",
+        "answer": "Toronto",
+        "correct": false
+      }
+    },
+    {
+      "grade": 4,
       "subject": "Earth Science",
       "question": "Name the three main types of rock.",
       "answer": "Igneous, sedimentary and metamorphic",
@@ -79,17 +90,6 @@
         "name": "Theo",
         "answer": "Igneous, sedimentary and metamorphic",
         "correct": true
-      }
-    },
-    {
-      "grade": 4,
-      "subject": "World Geography",
-      "question": "What is the capital of Canada?",
-      "answer": "Ottawa",
-      "classmate": {
-        "name": "Priya",
-        "answer": "Toronto",
-        "correct": false
       }
     },
     {

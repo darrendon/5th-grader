@@ -584,8 +584,11 @@ function renderBoard() {
     <div class="board-layout">
       <div class="tiles">
         ${qs
+          .map((q, i) => [q, i])
+          // Highest grade on top, like the money ladder; same-grade tiles keep file order.
+          .sort(([a, ai], [b, bi]) => (b.grade || 0) - (a.grade || 0) || ai - bi)
           .map(
-            (q, i) => `<button class="tile grade-${Math.min(Math.max(q.grade || 1, 1), 5)} ${state.used[i] ? "used" : ""}" data-action="openTile" data-tile="${i}" ${state.used[i] ? "disabled" : ""}>
+            ([q, i]) => `<button class="tile grade-${Math.min(Math.max(q.grade || 1, 1), 5)} ${state.used[i] ? "used" : ""}" data-action="openTile" data-tile="${i}" ${state.used[i] ? "disabled" : ""}>
               <span class="tile-grade">${q.grade ? gradeName(q.grade) : ""}</span>
               <span class="tile-subject">${esc(q.subject || `Question ${i + 1}`)}</span>
             </button>`
