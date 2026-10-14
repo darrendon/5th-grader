@@ -3,129 +3,126 @@
   "questions": [
     {
       "grade": 1,
-      "subject": "Spelling",
-      "question": "Spell the word “because.”",
-      "answer": "B-E-C-A-U-S-E",
+      "subject": "Animals",
+      "question": "What is the only mammal that can truly fly?",
+      "answer": "The bat",
+      "note": "Flying squirrels only glide.",
       "classmate": {
         "name": "Maya",
-        "answer": "B-E-C-A-U-S-E",
+        "answer": "The bat",
         "correct": true
       }
     },
     {
       "grade": 1,
-      "subject": "Science",
-      "question": "How many legs does an insect have?",
-      "answer": "6",
+      "subject": "Shapes",
+      "question": "How many sides do 3 triangles and 2 hexagons have in all?",
+      "answer": "21",
       "classmate": {
         "name": "Theo",
-        "answer": "6",
-        "correct": true
-      }
-    },
-    {
-      "grade": 2,
-      "subject": "Math",
-      "question": "What number comes next? 2, 5, 8, 11, ___",
-      "answer": "14",
-      "classmate": {
-        "name": "Priya",
-        "answer": "14",
-        "correct": true
+        "answer": "20",
+        "correct": false
       }
     },
     {
       "grade": 2,
       "subject": "Grammar",
-      "question": "What is the plural of “mouse”?",
-      "answer": "Mice",
-      "classmate": {
-        "name": "Jonah",
-        "answer": "Mouses",
-        "correct": false
-      }
-    },
-    {
-      "grade": 3,
-      "subject": "Geography",
-      "question": "Which is the largest ocean on Earth?",
-      "choices": [
-        "Atlantic",
-        "Indian",
-        "Pacific",
-        "Arctic"
-      ],
-      "answer": "Pacific",
-      "classmate": {
-        "name": "Lucy",
-        "answer": "Pacific",
-        "correct": true
-      }
-    },
-    {
-      "grade": 3,
-      "subject": "Multiplication",
-      "question": "What is 9 × 7?",
-      "answer": "63",
-      "classmate": {
-        "name": "Maya",
-        "answer": "63",
-        "correct": true
-      }
-    },
-    {
-      "grade": 4,
-      "subject": "Science",
-      "question": "True or false: Sound travels faster than light.",
-      "choices": [
-        "True",
-        "False"
-      ],
-      "answer": "False",
-      "classmate": {
-        "name": "Theo",
-        "answer": "False",
-        "correct": true
-      }
-    },
-    {
-      "grade": 4,
-      "subject": "U.S. History",
-      "question": "What document, approved in 1776, announced that the American colonies were breaking away from Great Britain?",
-      "answer": "The Declaration of Independence",
+      "question": "What is the past tense of “drink”?",
+      "answer": "Drank",
+      "note": "“Drunk” is the past participle: “I have drunk.”",
       "classmate": {
         "name": "Priya",
-        "answer": "The Declaration of Independence",
+        "answer": "Drank",
         "correct": true
       }
     },
     {
-      "grade": 5,
-      "subject": "Math",
-      "question": "A box is 4 cm long, 3 cm wide and 5 cm tall. What is its volume?",
-      "answer": "60 cubic centimeters",
-      "note": "Also accept: 60 cm³",
+      "grade": 2,
+      "subject": "Life Science",
+      "question": "What is the word for the process a caterpillar goes through to become a butterfly?",
+      "answer": "Metamorphosis",
       "classmate": {
         "name": "Jonah",
-        "answer": "60 cubic centimeters",
+        "answer": "Metamorphosis",
+        "correct": true
+      }
+    },
+    {
+      "grade": 3,
+      "subject": "Place Value",
+      "question": "What is the value of the 7 in 47,321?",
+      "answer": "7,000",
+      "classmate": {
+        "name": "Lucy",
+        "answer": "7,000",
+        "correct": true
+      }
+    },
+    {
+      "grade": 3,
+      "subject": "U.S. Geography",
+      "question": "Which U.S. state borders exactly one other state?",
+      "answer": "Maine",
+      "note": "Maine borders only New Hampshire. Alaska borders no other state.",
+      "classmate": {
+        "name": "Maya",
+        "answer": "Alaska",
+        "correct": false
+      }
+    },
+    {
+      "grade": 4,
+      "subject": "Earth Science",
+      "question": "Name the three main types of rock.",
+      "answer": "Igneous, sedimentary and metamorphic",
+      "note": "All three needed.",
+      "classmate": {
+        "name": "Theo",
+        "answer": "Igneous, sedimentary and metamorphic",
+        "correct": true
+      }
+    },
+    {
+      "grade": 4,
+      "subject": "Fractions",
+      "question": "Which is greater: 5/8 or 2/3?",
+      "choices": [
+        "5/8",
+        "2/3"
+      ],
+      "answer": "2/3",
+      "classmate": {
+        "name": "Priya",
+        "answer": "5/8",
+        "correct": false
+      }
+    },
+    {
+      "grade": 5,
+      "subject": "Decimals",
+      "question": "What is 2.4 ÷ 0.3?",
+      "answer": "8",
+      "classmate": {
+        "name": "Jonah",
+        "answer": "8",
         "correct": true
       }
     },
     {
       "grade": 5,
-      "subject": "Life Science",
-      "question": "What gas do plants take in from the air to make their own food?",
-      "answer": "Carbon dioxide",
+      "subject": "U.S. History",
+      "question": "Which amendment to the U.S. Constitution abolished slavery?",
+      "answer": "The 13th Amendment",
       "classmate": {
         "name": "Lucy",
-        "answer": "Oxygen",
-        "correct": false
+        "answer": "The 13th Amendment",
+        "correct": true
       }
     }
   ],
   "million": {
-    "subject": "5th Grade U.S. History",
-    "question": "In what year did the Pilgrims land at Plymouth aboard the Mayflower?",
-    "answer": "1620"
+    "subject": "5th Grade American History",
+    "question": "From which country did the United States buy Alaska in 1867?",
+    "answer": "Russia"
   }
 }

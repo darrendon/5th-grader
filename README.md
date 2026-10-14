@@ -1,6 +1,6 @@
 # Are You Smarter Than a 5th Grader?
 
-A homemade version of the game show for a room full of friends, with everyone answering every question at once. Picture, audio and video questions, sound cues, and three original episodes to start from.
+A homemade version of the game show for a room full of friends, with everyone answering every question at once. Picture, audio and video questions, sound cues, and an original episode to start from.
 
 The site republishes itself on GitHub Pages whenever you change a file on the `main` branch, usually within a minute.
 
@@ -40,17 +40,17 @@ An episode has 10 questions (two per grade, 1st through 5th) and a million-dolla
   "title": "Episode 1",
   "questions": [
     {
-      "grade": 2,
-      "subject": "Grammar",
-      "question": "What is the plural of “mouse”?",
-      "answer": "Mice",
-      "classmate": { "name": "Jonah", "answer": "Mouses", "correct": false }
+      "grade": 3,
+      "subject": "U.S. Geography",
+      "question": "Which U.S. state borders exactly one other state?",
+      "answer": "Maine",
+      "classmate": { "name": "Maya", "answer": "Alaska", "correct": false }
     }
   ],
   "million": {
-    "subject": "5th Grade U.S. History",
-    "question": "In what year did the Pilgrims land at Plymouth aboard the Mayflower?",
-    "answer": "1620"
+    "subject": "5th Grade American History",
+    "question": "From which country did the United States buy Alaska in 1867?",
+    "answer": "Russia"
   }
 }
 ```
@@ -61,18 +61,18 @@ An episode has 10 questions (two per grade, 1st through 5th) and a million-dolla
 | `subject` | The name on the board tile |
 | `question`, `answer` | What's shown, and what's revealed |
 | `choices` | Optional list for multiple choice or true/false, e.g. `["True", "False"]`. Write `answer` exactly as it appears in the list so it highlights |
-| `note` | Optional small print under the answer, e.g. `"Also accept: polliwog"` |
+| `note` | Optional small print under the answer, e.g. `"All three needed."` |
 | `classmate` | The 5th grader's answer used by Peek, Copy and Save. Set `correct` to `false` to make them wrong — that's what makes the cheats a gamble |
 
 Questions can have any number of entries and the board grows to fit, though the money ladder is built for 10. Leave out `million` to skip the million-dollar round.
 
 ### Adding an episode
 
-1. Copy an episode file in `games/` and rename it, e.g. `episode4.json`.
+1. Copy `games/episode1.json` and rename it, e.g. `episode2.json`.
 2. Add it to `games/index.json` so it shows up on the start screen:
 
 ```json
-{ "id": "episode4", "title": "Episode 4", "description": "Anything you like" }
+{ "id": "episode2", "title": "Episode 2", "description": "Anything you like" }
 ```
 
 The `id` is the file name without `.json`. You can also load a game file from your computer with **Load a game file…** on the start screen.
