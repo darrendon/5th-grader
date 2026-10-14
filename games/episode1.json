@@ -4,23 +4,23 @@
     {
       "grade": 1,
       "subject": "Animals",
-      "question": "What is the only mammal that can truly fly?",
-      "answer": "The bat",
-      "note": "Flying squirrels only glide.",
+      "question": "What word describes an animal that is awake at night and sleeps during the day?",
+      "answer": "Nocturnal",
       "classmate": {
         "name": "Maya",
-        "answer": "The bat",
+        "answer": "Nocturnal",
         "correct": true
       }
     },
     {
       "grade": 1,
-      "subject": "Shapes",
-      "question": "How many sides do 3 triangles and 2 hexagons have in all?",
-      "answer": "21",
+      "subject": "Calendar",
+      "question": "How many months of the year have 31 days?",
+      "answer": "7",
+      "note": "January, March, May, July, August, October, December",
       "classmate": {
         "name": "Theo",
-        "answer": "20",
+        "answer": "6",
         "correct": false
       }
     },
@@ -48,12 +48,12 @@
     },
     {
       "grade": 3,
-      "subject": "Place Value",
-      "question": "What is the value of the 7 in 47,321?",
-      "answer": "7,000",
+      "subject": "Time",
+      "question": "How many minutes are in 3½ hours?",
+      "answer": "210",
       "classmate": {
         "name": "Lucy",
-        "answer": "7,000",
+        "answer": "210",
         "correct": true
       }
     },
@@ -83,16 +83,12 @@
     },
     {
       "grade": 4,
-      "subject": "Fractions",
-      "question": "Which is greater: 5/8 or 2/3?",
-      "choices": [
-        "5/8",
-        "2/3"
-      ],
-      "answer": "2/3",
+      "subject": "World Geography",
+      "question": "What is the capital of Canada?",
+      "answer": "Ottawa",
       "classmate": {
         "name": "Priya",
-        "answer": "5/8",
+        "answer": "Toronto",
         "correct": false
       }
     },
@@ -110,18 +106,19 @@
     {
       "grade": 5,
       "subject": "U.S. History",
-      "question": "Which amendment to the U.S. Constitution abolished slavery?",
-      "answer": "The 13th Amendment",
+      "question": "Who was president during the War of 1812?",
+      "answer": "James Madison",
       "classmate": {
         "name": "Lucy",
-        "answer": "The 13th Amendment",
+        "answer": "James Madison",
         "correct": true
       }
     }
   ],
   "million": {
-    "subject": "5th Grade American History",
-    "question": "From which country did the United States buy Alaska in 1867?",
-    "answer": "Russia"
+    "subject": "5th Grade Physical Science",
+    "question": "What is the only metal that is liquid at room temperature?",
+    "answer": "Mercury",
+    "note": "Also accept: quicksilver"
   }
 }
