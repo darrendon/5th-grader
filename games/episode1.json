@@ -27,9 +27,8 @@
     {
       "grade": 2,
       "subject": "Grammar",
-      "question": "What is the past tense of “drink”?",
+      "question": "What is the simple past tense of “drink”?",
       "answer": "Drank",
-      "note": "“Drunk” is the past participle: “I have drunk.”",
       "classmate": {
         "name": "Priya",
         "answer": "Drank",
