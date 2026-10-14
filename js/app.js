@@ -1,4 +1,4 @@
-import { playSound, stopSound, toggleMute, isMuted, mediaUrl } from "./sounds.js";
+import { playSound, stopSound, toggleMute, isMuted, mediaUrl } from "./sounds.js?v=__V__";
 
 // ---------------------------------------------------------------------------
 // Rules

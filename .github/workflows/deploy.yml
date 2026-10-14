@@ -26,6 +26,8 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check the game files are valid JSON
         run: for f in games/*.json; do python3 -m json.tool "$f" > /dev/null || { echo "::error file=$f::$f is not valid JSON"; exit 1; }; done
+      - name: Make browsers load the new code after each deploy
+        run: sed -i "s/__V__/${GITHUB_SHA::8}/g" index.html js/app.js
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
