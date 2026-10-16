@@ -19,15 +19,15 @@
       "subject": "Grammar",
       "question": "Which one is a compound word?",
       "choices": [
-        "carpet",
-        "message",
+        "scarlet",
+        "legend",
+        "mandate",
         "season",
-        "rainbow",
-        "pumpkin",
-        "button"
+        "carpet",
+        "rainbow"
       ],
       "answer": "rainbow",
-      "note": "Rain + bow. The others just look like two words: car + pet, mess + age, sea + son, pump + kin, butt + on."
+      "note": "Rain + bow. The others just look like two words: scar + let, leg + end, man + date, sea + son, car + pet."
     },
     {
       "grade": 2,
