@@ -720,7 +720,7 @@ function renderQuestion() {
       <div class="q-title">${header}</div>
       ${done ? "" : `<div class="q-stake"><span>Playing for</span>${stake}</div>`}
     </header>
-    <section class="chalkboard">
+    <section class="chalkboard ${String(q.question).length > 80 || (q.choices || []).length > 4 ? "dense" : ""}">
       <div class="q-text">${esc(q.question)}</div>
       ${choices}
       ${renderMedia(q, revealed)}

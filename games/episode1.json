@@ -17,15 +17,17 @@
     {
       "grade": 2,
       "subject": "Grammar",
-      "question": "Which of these is a compound word?",
+      "question": "Every one of these words has two smaller words hiding inside it. Which one is a true compound word?",
       "choices": [
         "carpet",
+        "message",
         "season",
-        "button",
-        "butterfly"
+        "rainbow",
+        "pumpkin",
+        "button"
       ],
-      "answer": "butterfly",
-      "note": "Carpet, season and button just happen to contain two smaller words. Their meanings don't come from those words."
+      "answer": "rainbow",
+      "note": "Rain + bow. The others just look like two words: car + pet, mess + age, sea + son, pump + kin, butt + on."
     },
     {
       "grade": 2,
