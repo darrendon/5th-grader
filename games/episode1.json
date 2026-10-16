@@ -76,9 +76,9 @@
     }
   ],
   "million": {
-    "subject": "5th Grade Physical Science",
-    "question": "What is the only metal that is liquid at room temperature?",
-    "answer": "Mercury",
-    "note": "Also accept: quicksilver"
+    "subject": "5th Grade Space Science",
+    "question": "What is the hottest planet in our solar system?",
+    "answer": "Venus",
+    "note": "Not Mercury! Venus's thick carbon dioxide atmosphere traps heat, making it hotter than Mercury even though it's farther from the Sun."
   }
 }
