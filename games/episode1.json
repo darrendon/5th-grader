@@ -17,8 +17,15 @@
     {
       "grade": 2,
       "subject": "Grammar",
-      "question": "What is the simple past tense of “drink”?",
-      "answer": "Drank"
+      "question": "Which of these is a compound word?",
+      "choices": [
+        "carpet",
+        "season",
+        "button",
+        "butterfly"
+      ],
+      "answer": "butterfly",
+      "note": "Carpet, season and button just happen to contain two smaller words. Their meanings don't come from those words."
     },
     {
       "grade": 2,
