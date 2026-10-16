@@ -8,14 +8,14 @@ import { playSound, stopSound, toggleMute, isMuted, mediaUrl } from "./sounds.js
 const LADDER = [1000, 2000, 5000, 10000, 25000, 50000, 100000, 175000, 300000, 500000, 1000000];
 const SAFE_LEVEL = 5; // after 5 correct answers, $25,000 is guaranteed
 const SAFE_AMOUNT = 25000;
-const WALK_AWAY_AMOUNT = 500000; // what you keep if you skip the million question
 const CHEATS = {
-  peek: { label: "Peek", icon: "👀", tip: "Look at the classmate's answer, then write your own" },
-  copy: { label: "Copy", icon: "📝", tip: "Lock in the classmate's answer, right or wrong" },
-  save: { label: "Save", icon: "🛟", tip: "If you're wrong but the classmate is right, you're saved" },
+  peek: { label: "Peek", icon: "👀", tip: "Look at the 5th grader's answer, then write your own" },
+  copy: { label: "Copy", icon: "📝", tip: "Lock in the 5th grader's answer, right or wrong" },
+  save: { label: "Save", icon: "🛟", tip: "If you're wrong but the 5th grader is right, you're saved" },
 };
 const STORE_KEY = "smarter5th.state.v1";
-const CLASSMATE = "__classmate"; // key for the classmate's mark on each question
+const CLASSMATE = "__classmate"; // key for the 5th grader's mark when they aren't a player
+const QUESTIONS_PER_CLASSMATE = 2; // a new 5th grader is chosen every 2 questions
 
 // ---------------------------------------------------------------------------
 // State
@@ -31,7 +31,9 @@ function freshState() {
     game: null,
     gameId: null,
     players: [],
-    classmate: "", // name of the person in the room playing the 5th grader
+    classmate: null, // current 5th grader: { playerId } for a player, or { name } for anyone else
+    classmateBlock: -1, // which pair of questions the current 5th grader covers
+    pastClassmates: [], // names of everyone who has been the 5th grader this game
     used: [],
     asked: 0,
     current: null,
@@ -97,11 +99,32 @@ function participants() {
 function playerIsLive(p) {
   const c = state.current;
   if (p.status !== "in") return false;
-  if (c.kind === "million") return p.goForIt === true;
+  if (c.kind === "million") return true; // nobody walks away from the million
   return !c.drops.includes(p.id);
 }
 
-const mateName = () => (state.classmate || "").trim() || "the classmate";
+function classmateName() {
+  const m = state.classmate;
+  if (!m) return "the 5th grader";
+  if (m.playerId) return playerById(m.playerId)?.name || "the 5th grader";
+  return m.name || "the 5th grader";
+}
+
+const isClassmate = (p) => !!state.classmate && state.classmate.playerId === p.id;
+
+// The 5th grader's mark on the current question. If they're a player,
+// their own mark doubles as the 5th grader's.
+function classmateMark() {
+  const c = state.current;
+  const m = state.classmate;
+  return m && m.playerId ? c.marks[m.playerId] : c.marks[CLASSMATE];
+}
+
+// A new 5th grader is needed at the start of each pair of questions.
+function needsPick() {
+  if (!state.game || state.used.every(Boolean)) return false;
+  return state.classmateBlock !== Math.floor(state.asked / QUESTIONS_PER_CLASSMATE);
+}
 
 // The classmate only needs marking when it decides someone's result:
 // a Copy, or a Save by a player who was marked wrong.
@@ -118,7 +141,7 @@ function needsClassmate() {
 function liveResult(p) {
   const c = state.current;
   const cheat = c.cheats[p.id];
-  const mate = c.marks[CLASSMATE];
+  const mate = classmateMark();
   if (cheat === "copy") return mate;
   const mark = c.marks[p.id];
   if (mark === undefined) return undefined;
@@ -128,7 +151,7 @@ function liveResult(p) {
 
 function allMarked() {
   const c = state.current;
-  if (needsClassmate() && c.marks[CLASSMATE] === undefined) return false;
+  if (needsClassmate() && classmateMark() === undefined) return false;
   return participants().every((p) => (playerIsLive(p) ? liveResult(p) : c.marks[p.id]) !== undefined);
 }
 
@@ -154,9 +177,7 @@ async function loadGameById(id) {
 
 function startSetup(game, id) {
   const keepPlayers = state.players.map((p) => p.name);
-  const keepClassmate = state.classmate || "";
   state = freshState();
-  state.classmate = keepClassmate;
   state.game = game;
   state.gameId = id;
   state.used = game.questions.map(() => false);
@@ -177,7 +198,6 @@ function addPlayer(name) {
     bank: 0,
     correct: 0,
     cheats: { peek: true, copy: true, save: true },
-    goForIt: null,
   });
 }
 
@@ -196,8 +216,13 @@ const actions = {
   resume: () => {
     const s = savedGame();
     if (!s) return;
-    state = s;
+    state = { ...freshState(), ...s };
     state.overlay = null;
+    // Saves from before the 5th grader rotated stored a plain name.
+    if (typeof state.classmate === "string") {
+      state.classmate = null;
+      state.classmateBlock = -1;
+    }
     // A question whose results were already scored: move on from it.
     if (state.current?.phase === "done") return afterQuestion();
     render();
@@ -224,17 +249,15 @@ const actions = {
   backToLoader: () => {
     stopSound();
     const keep = state.players;
-    const mate = state.classmate;
     state = freshState();
     state.players = keep;
-    state.classmate = mate;
     clearSaved();
     render();
   },
 
   openTile: ({ tile }) => {
     const i = Number(tile);
-    if (state.used[i]) return;
+    if (state.used[i] || needsPick()) return;
     state.current = { kind: "grade", tile: i, phase: "asking", marks: {}, cheats: {}, drops: [] };
     state.screen = "question";
     playSound("question");
@@ -273,6 +296,7 @@ const actions = {
     const c = state.current;
     if (c.phase !== "asking" || c.kind === "million") return;
     const p = playerById(id);
+    if (isClassmate(p)) return; // the 5th grader can't cheat off themselves
     if (c.cheats[id] === cheat) {
       // Clicking again undoes a misclick.
       p.cheats[cheat] = true;
@@ -310,26 +334,35 @@ const actions = {
     for (const p of participants()) {
       if (!(playerIsLive(p) && c.cheats[p.id] === "copy")) c.marks[p.id] = value === "1";
     }
-    if (needsClassmate()) c.marks[CLASSMATE] = value === "1";
+    if (needsClassmate() && !state.classmate?.playerId) c.marks[CLASSMATE] = value === "1";
     playSound(value === "1" ? "correct" : "wrong");
     render();
   },
   continue: () => finishQuestion(),
 
-  setGoForIt: ({ id, value }) => {
-    const p = playerById(id);
-    p.goForIt = value === "1";
+  pickClassmate: ({ id }) => {
+    let pick;
+    if (id) {
+      pick = { playerId: id };
+    } else {
+      const name = (document.getElementById("other-classmate")?.value || "").trim();
+      if (!name) return document.getElementById("other-classmate")?.focus();
+      pick = { name };
+    }
+    state.classmate = pick;
+    state.classmateBlock = Math.floor(state.asked / QUESTIONS_PER_CLASSMATE);
+    const name = classmateName();
+    if (!state.pastClassmates.includes(name)) state.pastClassmates.push(name);
+    render();
+  },
+  changeClassmate: () => {
+    // Picked the wrong person: they don't count as having gone.
+    state.pastClassmates = state.pastClassmates.filter((n) => n !== classmateName());
+    state.classmateBlock = -1;
     render();
   },
   startMillion: () => {
-    const players = stillIn();
-    if (players.some((p) => p.goForIt === null)) return;
-    for (const p of players) {
-      if (!p.goForIt) {
-        p.status = "dropped";
-        p.bank = WALK_AWAY_AMOUNT;
-      }
-    }
+    if (state.screen !== "millionIntro") return;
     state.current = { kind: "million", phase: "asking", marks: {}, cheats: {}, drops: [] };
     state.screen = "question";
     playSound("question");
@@ -411,7 +444,6 @@ function afterQuestion() {
   const allUsed = state.used.every(Boolean);
   if (allUsed) {
     if (state.game.million && stillIn().length) {
-      stillIn().forEach((p) => (p.goForIt = null));
       state.screen = "millionIntro";
       playSound("million");
       render();
@@ -461,14 +493,6 @@ function render() {
       input.value = draftName;
       input.addEventListener("input", (e) => (draftName = e.target.value));
     }
-    const mate = document.getElementById("classmate-name");
-    if (mate) {
-      mate.value = state.classmate || "";
-      mate.addEventListener("input", (e) => {
-        state.classmate = e.target.value;
-        save();
-      });
-    }
   }
 }
 
@@ -480,7 +504,7 @@ function logo(small = false) {
   return `<div class="logo ${small ? "logo-small" : ""}">
     <span class="logo-are">Are You</span>
     <span class="logo-smarter">Smarter</span>
-    <span class="logo-than">Than a</span>
+    <span class="logo-than">Than a <span class="logo-former">Former</span></span>
     <span class="logo-fifth"><span class="logo-5">5</span><sup>th</sup> Grader?</span>
   </div>`;
 }
@@ -525,18 +549,14 @@ function renderSetup() {
           .map((p) => `<li><span>${esc(p.name)}</span><button class="x" data-action="removePlayer" data-id="${p.id}" aria-label="Remove">×</button></li>`)
           .join("")}
       </ul>
-      <label class="classmate-field">
-        <span>🎒 Who's playing the 5th-grade classmate?</span>
-        <input id="classmate-name" placeholder="Classmate's name (optional)" autocomplete="off" maxlength="24" />
-      </label>
       <details class="rules">
         <summary>How it works</summary>
         <ul>
           <li>Pick any subject on the board. Everyone writes down an answer to every question.</li>
           <li>Each right answer moves you up the money ladder. One wrong answer and you flunk out — with ${money(SAFE_AMOUNT)} if you'd already banked it, otherwise nothing.</li>
           <li>After seeing a question you can <b>drop out</b> and keep what you've banked.</li>
-          <li>One person in the room plays the 5th-grade classmate and answers every question too. Each player gets one <b>Peek</b> (look at the classmate's answer), one <b>Copy</b> (lock in the classmate's answer) and one <b>Save</b> (if you're wrong but the classmate is right, you're saved), one per question.</li>
-          <li>Survive all ${g.questions.length} and you can go for ${money(LADDER[10])} — or walk away with ${money(WALK_AWAY_AMOUNT)}.</li>
+          <li>Every ${QUESTIONS_PER_CLASSMATE} questions, the group picks a new <b>5th grader</b> — a different person each time. They answer too, and everyone else can use their answer: one <b>Peek</b> (look at it), one <b>Copy</b> (lock it in) and one <b>Save</b> (if you're wrong but the 5th grader is right, you're saved) per player, one per question.</li>
+          <li>Survive all ${g.questions.length} and you face the ${money(LADDER[10])} question — no cheats and no walking away. Get it wrong and you leave with ${money(SAFE_AMOUNT)}.</li>
           <li>Players who are out keep answering for bragging rights: most correct answers breaks ties.</li>
         </ul>
       </details>
@@ -594,6 +614,11 @@ function renderBoard() {
       <div class="topbar-info">
         <div class="eyebrow">Question ${state.asked + 1} of ${qs.length}</div>
         <div class="stake">${nobodyIn ? "Playing for bragging rights" : `Playing for ${money(LADDER[Math.min(state.asked, 9)])}`}</div>
+        ${
+          state.classmate && !needsPick()
+            ? `<div class="current-mate">🎒 5th grader: <b>${esc(classmateName())}</b> <button class="link" data-action="changeClassmate">change</button></div>`
+            : ""
+        }
       </div>
       <button class="btn btn-ghost small" data-action="endGame">End game</button>
     </header>
@@ -615,7 +640,36 @@ function renderBoard() {
       ${renderLadder()}
     </div>
     ${renderScoreboard()}
+    ${needsPick() ? renderPicker() : ""}
   </main>`;
+}
+
+function renderPicker() {
+  const block = Math.floor(state.asked / QUESTIONS_PER_CLASSMATE);
+  const first = block * QUESTIONS_PER_CLASSMATE + 1;
+  const last = Math.min(first + QUESTIONS_PER_CLASSMATE - 1, state.game.questions.length);
+  const range = first === last ? `question ${first}` : `questions ${first}–${last}`;
+  const went = (name) => state.pastClassmates.includes(name);
+  return `<div class="overlay">
+    <div class="overlay-card picker">
+      <div class="picker-icon">🎒</div>
+      <h2>Who's the new 5th grader?</h2>
+      <p class="muted-ink">As a group, pick someone who hasn't gone yet. They're the 5th grader for ${range}.</p>
+      <div class="picker-options">
+        ${state.players
+          .map(
+            (p) => `<button class="pick ${went(p.name) ? "went" : ""}" data-action="pickClassmate" data-id="${p.id}">
+              ${esc(p.name)}${went(p.name) ? `<span>already went</span>` : ""}
+            </button>`
+          )
+          .join("")}
+      </div>
+      <form class="add-player" onsubmit="return false">
+        <input id="other-classmate" placeholder="Someone else in the room" autocomplete="off" maxlength="24" />
+        <button class="btn btn-yellow" data-action="pickClassmate">Choose</button>
+      </form>
+    </div>
+  </div>`;
 }
 
 function renderMedia(q, revealed) {
@@ -654,7 +708,8 @@ function renderQuestion() {
 
   const parts = participants();
   const ready = revealed && allMarked();
-  const mateMark = c.marks[CLASSMATE];
+  const mateMark = classmateMark();
+  const matePlayer = !!state.classmate?.playerId;
 
   const chips = parts
     .map((p) => {
@@ -663,7 +718,9 @@ function renderQuestion() {
       const cheat = c.cheats[p.id];
       let controls = "";
       if (!revealed) {
-        if (p.status === "in" && !million) {
+        if (p.status === "in" && !million && isClassmate(p)) {
+          controls = `<span class="chip-note">🎒 the 5th grader — no cheats</span><button class="chip-btn drop ${dropping ? "active" : ""}" data-action="toggleDrop" data-id="${p.id}">${dropping ? `Dropping out · ${money(levelValue(p.level))}` : "Drop out"}</button>`;
+        } else if (p.status === "in" && !million) {
           const cheatBtns = Object.entries(CHEATS)
             .map(([k, v]) => {
               const active = cheat === k;
@@ -673,19 +730,19 @@ function renderQuestion() {
             .join("");
           controls = `${cheatBtns}<button class="chip-btn drop ${dropping ? "active" : ""}" data-action="toggleDrop" data-id="${p.id}">${dropping ? `Dropping out · ${money(levelValue(p.level))}` : "Drop out"}</button>`;
         } else if (!isLive) {
-          controls = `<span class="chip-note">${p.status === "in" ? "walked away" : "bragging rights"}</span>`;
+          controls = `<span class="chip-note">bragging rights</span>`;
         } else {
-          controls = `<span class="chip-note">going for it</span>`;
+          controls = `<span class="chip-note">no cheats</span>`;
         }
       } else {
         const result = isLive ? liveResult(p) : c.marks[p.id];
         if (isLive && cheat === "copy") {
-          controls = `<span class="chip-note">copied ${esc(mateName())} → ${result === undefined ? "mark the classmate" : result ? "✓ right" : "✗ wrong"}</span>`;
+          controls = `<span class="chip-note">copied ${esc(classmateName())} → ${result === undefined ? `mark ${esc(classmateName())}` : result ? "✓ right" : "✗ wrong"}</span>`;
         } else {
           const savedNote =
             isLive && cheat === "save" && c.marks[p.id] === false
               ? mateMark === undefined
-                ? `<span class="chip-note">🛟 mark the classmate</span>`
+                ? `<span class="chip-note">🛟 mark ${esc(classmateName())}</span>`
                 : mateMark
                 ? `<span class="chip-note saved">🛟 saved!</span>`
                 : `<span class="chip-note">🛟 save failed</span>`
@@ -695,8 +752,12 @@ function renderQuestion() {
         }
         if (!isLive) controls += `<span class="chip-note small">for bragging rights</span>`;
       }
-      const cheatTag = cheat ? `<span class="tag">${CHEATS[cheat].icon} ${CHEATS[cheat].label}</span>` : "";
-      return `<div class="chip ${isLive ? "live" : "bystander"} ${dropping ? "dropping" : ""}">
+      const cheatTag = cheat
+        ? `<span class="tag">${CHEATS[cheat].icon} ${CHEATS[cheat].label}</span>`
+        : !million && isClassmate(p)
+        ? `<span class="tag gold">🎒 5th grader</span>`
+        : "";
+      return `<div class="chip ${isLive ? "live" : "bystander"} ${dropping ? "dropping" : ""} ${!million && isClassmate(p) ? "is-mate" : ""}">
         <div class="chip-head"><span class="chip-name">${esc(p.name)}</span>${cheatTag}<span class="chip-bank">${money(bankOf(p))}</span></div>
         <div class="chip-controls">${controls}</div>
       </div>`;
@@ -704,12 +765,12 @@ function renderQuestion() {
     .join("");
 
   const mateChip =
-    revealed && needsClassmate()
+    revealed && needsClassmate() && !matePlayer
       ? `<div class="chip classmate-chip">
-          <div class="chip-head"><span class="chip-name">🎒 ${esc((state.classmate || "").trim() || "Classmate")}</span><span class="tag">5th grader</span></div>
+          <div class="chip-head"><span class="chip-name">🎒 ${esc(classmateName())}</span><span class="tag">5th grader</span></div>
           <div class="chip-controls">
-            <button class="mark yes ${mateMark === true ? "on" : ""}" data-action="mark" data-id="${CLASSMATE}" data-value="1" aria-label="Classmate correct">✓</button>
-            <button class="mark no ${mateMark === false ? "on" : ""}" data-action="mark" data-id="${CLASSMATE}" data-value="0" aria-label="Classmate wrong">✗</button>
+            <button class="mark yes ${mateMark === true ? "on" : ""}" data-action="mark" data-id="${CLASSMATE}" data-value="1" aria-label="5th grader correct">✓</button>
+            <button class="mark no ${mateMark === false ? "on" : ""}" data-action="mark" data-id="${CLASSMATE}" data-value="0" aria-label="5th grader wrong">✗</button>
             <span class="chip-note small">for Copy &amp; Save</span>
           </div>
         </div>`
@@ -717,7 +778,7 @@ function renderQuestion() {
 
   return `<main class="screen question ${million ? "million" : ""}">
     <header class="q-header">
-      <div class="q-title">${header}</div>
+      <div class="q-title">${header}${!million && state.classmate ? `<div class="q-mate">🎒 5th grader: ${esc(classmateName())}</div>` : ""}</div>
       ${done ? "" : `<div class="q-stake"><span>Playing for</span>${stake}</div>`}
     </header>
     <section class="chalkboard ${String(q.question).length > 80 || (q.choices || []).length > 4 ? "dense" : ""}">
@@ -745,24 +806,15 @@ function renderQuestion() {
 function renderMillionIntro() {
   const m = state.game.million;
   const players = stillIn();
-  const ready = players.every((p) => p.goForIt !== null);
   return `<main class="screen million-intro">
     <div class="million-badge">${money(LADDER[10])}</div>
     <h1>The ${money(LADDER[10])} Question</h1>
     <p class="million-subject">Subject: <b>${esc(m.subject || "Mystery")}</b></p>
-    <p class="muted">No cheats. Get it right for ${money(LADDER[10])}. Get it wrong and you leave with ${money(SAFE_AMOUNT)}. Or walk away now with ${money(WALK_AWAY_AMOUNT)}.</p>
+    <p class="muted">No cheats and no walking away. Get it right for ${money(LADDER[10])}. Get it wrong and you leave with ${money(SAFE_AMOUNT)}.</p>
     <div class="decisions">
-      ${players
-        .map(
-          (p) => `<div class="decision">
-            <span class="chip-name">${esc(p.name)}</span>
-            <button class="chip-btn ${p.goForIt === true ? "active" : ""}" data-action="setGoForIt" data-id="${p.id}" data-value="1">Go for it</button>
-            <button class="chip-btn ${p.goForIt === false ? "active" : ""}" data-action="setGoForIt" data-id="${p.id}" data-value="0">Walk away · ${money(WALK_AWAY_AMOUNT)}</button>
-          </div>`
-        )
-        .join("")}
+      ${players.map((p) => `<div class="decision"><span class="chip-name">${esc(p.name)}</span><span class="tag">${money(bankOf(p))} on the line</span></div>`).join("")}
     </div>
-    <button class="btn btn-yellow" data-action="startMillion" ${ready ? "" : "disabled"}>${ready ? "Show the question" : "Everyone decide"}</button>
+    <button class="btn btn-yellow" data-action="startMillion">Show the question (Space)</button>
   </main>`;
 }
 
@@ -779,7 +831,7 @@ function renderResults() {
   return `<main class="screen results">
     ${logo(true)}
     <h1 class="headline">${headline}</h1>
-    ${smarter.length ? `<p class="smarter">${smarter.map((p) => esc(p.name)).join(" & ")} ${smarter.length > 1 ? "are" : "is"} smarter than a 5th grader!</p>` : ""}
+    ${smarter.length ? `<p class="smarter">${smarter.map((p) => esc(p.name)).join(" & ")} ${smarter.length > 1 ? "are" : "is"} smarter than a former 5th grader!</p>` : ""}
     <ol class="final">
       ${list
         .map(
@@ -811,7 +863,7 @@ function renderOverlay() {
         <div class="flunk-f">F</div>
         <h2>${names} flunked out!</h2>
         <p>The answer was <b>${esc(state.lastAnswer)}</b>.</p>
-        <p class="say-it">Now say it to the camera:<br/><span>“I am not smarter than a 5th grader!”</span></p>
+        <p class="say-it">Now say it to the camera:<br/><span>“I am not smarter than a former 5th grader!”</span></p>
         <button class="btn btn-yellow" data-action="closeOverlay">Continue (Space)</button>
       </div>
     </div>`;
@@ -847,6 +899,10 @@ document.addEventListener("keydown", (e) => {
     if (e.key === "Enter" && e.target.id === "player-name") {
       e.preventDefault();
       actions.addPlayer();
+    }
+    if (e.key === "Enter" && e.target.id === "other-classmate") {
+      e.preventDefault();
+      actions.pickClassmate({});
     }
     return;
   }

@@ -1,4 +1,4 @@
-# Are You Smarter Than a 5th Grader?
+# Are You Smarter Than a Former 5th Grader?
 
 A homemade version of the game show for a room full of friends, with everyone answering every question at once. Picture, audio and video questions, sound cues, and an original episode to start from.
 
@@ -7,17 +7,17 @@ The site republishes itself on GitHub Pages whenever you change a file on the `m
 ## How a game works
 
 - Add the players, then pick any subject on the board. Each player writes down an answer (paper, whiteboards, phones — whatever you like).
-- One person in the room plays the 5th-grade classmate. They answer every question too, but don't score. You can enter their name on the setup screen.
+- Before questions 1, 3, 5, 7 and 9, the game asks the group to pick a new **5th grader**, a different person each time. Pick one of the players or type in anyone else in the room. The game marks who has already gone, and the **change** link next to their name on the board fixes a wrong pick.
 - Press **Space** for pencils down and the answer appears.
-- Mark each player ✓ or ✗ (or use **Everyone ✓ / ✗**), then press **Space** to continue. If someone used Copy, or used Save and got it wrong, a yellow classmate card appears so you can mark the classmate too.
+- Mark each player ✓ or ✗ (or use **Everyone ✓ / ✗**), then press **Space** to continue. If someone used Copy, or used Save and got it wrong, the game needs to know whether the 5th grader was right. When the 5th grader is a player, their own ✓ or ✗ counts. When it's someone else, a yellow card appears so you can mark them.
 - Every right answer moves a player up the money ladder: $1,000 → $2,000 → $5,000 → $10,000 → **$25,000 (guaranteed)** → $50,000 → $100,000 → $175,000 → $300,000 → $500,000.
-- One wrong answer and you flunk out — with $25,000 if you'd reached it, otherwise nothing — and you have to say "I am not smarter than a 5th grader!"
+- One wrong answer and you flunk out — with $25,000 if you'd reached it, otherwise nothing — and you have to say "I am not smarter than a former 5th grader!"
 - After seeing a question, a player can **drop out** and keep what they've banked.
-- Each player gets one of each cheat, one per question. Click the cheat on their card before you reveal the answer:
-  - **Peek** — the player looks at the classmate's answer, then writes their own
-  - **Copy** — the player is locked into the classmate's answer, right or wrong
-  - **Save** — if the player is wrong but the classmate is right, they're saved
-- Anyone who survives all 10 sees the subject of the **$1,000,000 question** and decides: go for it (no cheats; wrong means $25,000) or walk away with $500,000.
+- Each player gets one of each cheat, one per question. Click the cheat on their card before you reveal the answer. The current 5th grader can't cheat while it's their turn.
+  - **Peek** — the player looks at the 5th grader's answer, then writes their own
+  - **Copy** — the player is locked into the 5th grader's answer, right or wrong
+  - **Save** — if the player is wrong but the 5th grader is right, they're saved
+- Anyone who survives all 10 must answer the **$1,000,000 question**. They see the subject first, but there are no cheats and no walking away: wrong means $25,000.
 - Players who are out keep answering for bragging rights. The winner is whoever banked the most, with total correct answers breaking ties.
 
 The game saves itself in the browser, so a refresh or a closed tab won't lose a game in progress — you'll see a **Resume** button.

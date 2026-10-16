@@ -186,6 +186,10 @@ h2 {
   transform: rotate(6deg);
 }
 
+.logo-former {
+  color: var(--yellow);
+}
+
 .logo sup {
   font-size: 0.45em;
   margin-right: 0.15em;
@@ -338,6 +342,88 @@ h2 {
 }
 
 /* Board */
+.current-mate {
+  font-size: 0.9rem;
+  margin-top: 0.15rem;
+}
+
+.link {
+  border: 0;
+  background: none;
+  color: var(--yellow);
+  text-decoration: underline;
+  font-size: 0.8rem;
+  padding: 0 0.2rem;
+}
+
+/* Picking the 5th grader */
+.picker {
+  width: min(680px, 100%);
+}
+
+.picker-icon {
+  font-size: 3.4rem;
+  line-height: 1;
+}
+
+.muted-ink {
+  color: var(--ink-soft);
+  margin: 0;
+}
+
+.picker-options {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 0.4rem 0;
+}
+
+.pick {
+  border: 3px solid var(--ink);
+  background: var(--yellow);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 0.45em 1.1em;
+  font-family: "Fredoka", sans-serif;
+  font-weight: 600;
+  font-size: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.1;
+}
+
+.pick.went {
+  background: #e9e5d8;
+  border-color: rgba(31, 36, 48, 0.3);
+  color: var(--ink-soft);
+}
+
+.pick span {
+  font-size: 0.65rem;
+  font-family: "Nunito", sans-serif;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.picker .add-player {
+  width: 100%;
+}
+
+.q-mate {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--yellow);
+  margin-top: 0.2rem;
+}
+
+.chip.is-mate {
+  outline: 3px solid var(--yellow);
+}
+
+
 .topbar {
   display: flex;
   align-items: center;
@@ -740,23 +826,6 @@ audio.media {
 
 .chip.classmate-chip {
   background: var(--yellow);
-}
-
-.classmate-field {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  font-family: "Fredoka", sans-serif;
-  font-weight: 600;
-}
-
-.classmate-field input {
-  font: inherit;
-  font-weight: 500;
-  font-size: 1rem;
-  padding: 0.5em 0.9em;
-  border-radius: 12px;
-  border: 2px solid rgba(31, 36, 48, 0.35);
 }
 
 .chip.bystander {
