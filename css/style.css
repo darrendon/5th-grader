@@ -1830,3 +1830,149 @@ body.is-phone {
 .board-layout.with-aud .tiles {
   grid-auto-rows: minmax(3.4rem, 1fr);
 }
+
+/* ---------- Play-along subjects ---------- */
+
+.pp-subjects {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.pp-subjects legend {
+  font-family: "Fredoka", sans-serif;
+  font-weight: 700;
+  font-size: 1.05rem;
+  padding: 0;
+}
+
+.pp-subjects .small {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.pp select {
+  font: inherit;
+  font-size: 1.05rem;
+  padding: 0.55em 0.7em;
+  border-radius: 12px;
+  border: 3px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  width: 100%;
+}
+
+.pp-me {
+  flex-wrap: wrap;
+}
+
+.pp-subj {
+  font-family: "Nunito", sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: rgba(255, 253, 245, 0.75);
+  width: 100%;
+}
+
+.lb-subj {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+  margin-top: 0.1rem;
+}
+
+.lb-subj span {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: rgba(63, 167, 214, 0.18);
+  color: #1b5f80;
+  border-radius: 6px;
+  padding: 0.05em 0.4em;
+  white-space: nowrap;
+}
+
+.lb li {
+  align-items: start;
+}
+
+.lb .lb-name {
+  white-space: normal;
+}
+
+.lb.big .lb-subj span {
+  font-size: 0.8rem;
+}
+
+/* The play-along crowd in the 5th grader picker */
+.picker-aud {
+  width: 100%;
+  text-align: left;
+}
+
+.picker-aud h3 {
+  margin: 0.2rem 0 0.4rem;
+  font-family: "Fredoka", sans-serif;
+  font-size: 1rem;
+}
+
+.picker-aud ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  max-height: 34vh;
+  overflow: auto;
+}
+
+.aud-pick {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.6em 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+  text-align: left;
+  border: 2px solid rgba(31, 36, 48, 0.25);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  padding: 0.35rem 0.7rem;
+}
+
+.aud-pick:hover {
+  border-color: var(--ink);
+  background: #fff6cf;
+}
+
+.aud-pick.went {
+  background: #e9e5d8;
+  color: var(--ink-soft);
+}
+
+.aud-pick-name {
+  font-family: "Fredoka", sans-serif;
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+
+.aud-pick-name em {
+  font-family: "Nunito", sans-serif;
+  font-style: normal;
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--ink-soft);
+}
+
+.aud-pick-score {
+  text-align: right;
+  display: grid;
+}
+
+.aud-pick-score small {
+  color: var(--ink-soft);
+  font-weight: 700;
+}

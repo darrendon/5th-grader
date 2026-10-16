@@ -36,13 +36,16 @@ You can link straight to an episode with `?game=episode1` at the end of the site
 Everyone who isn't playing can answer along on their phone, with a leaderboard that runs all game. It works the same way as the Wheel of Fortune play-along: messages go through a free public relay, so there's nothing to sign up for or set up.
 
 1. On the setup screen, press **Turn on play-along**. You get a 5-letter room code and a QR code.
-2. People scan the QR code (or go to the site address with `/play` on the end and type the room code), enter a name, and they're in. They can join any time: the room code stays in the bottom corner during the game, and pressing **0** shows a big QR code with the leaderboard.
+2. People scan the QR code (or go to the site address with `/play` on the end and type the room code), enter a name, pick their two best subjects from the dropdowns, and they're in. They can join any time: the room code stays in the bottom corner during the game, and pressing **0** shows a big QR code with the leaderboard.
 3. Each question shows up on their phones as soon as it's on the TV. Multiple choice questions get tap-to-pick buttons; the rest get a text box. **One answer per question.**
 4. **Scoring:** a right answer is worth 1,000 points if it's locked in right away, dropping to 100 points over 30 seconds. After that it stays at 100. Wrong answers are worth nothing. The million-dollar question uses the same scale.
 5. **No spoilers:** phones only say "Locked in" until you reveal the answer, and the answer never reaches the phones before then.
 6. Answers are checked automatically. Capitals and punctuation don't matter, longer words forgive a typo or two, and number answers just need the right number ("210 minutes" counts). Under the question you'll see how many people locked in, and after the reveal how many got it and who was fastest.
 7. If the checker got something wrong, press **Check answers** after the reveal. It lists every answer people gave; tap one to flip it between right and wrong (everyone who gave that answer changes together).
-8. The board shows the top 8 next to the money ladder, and the final results screen shows the play-along leaderboard under the players.
+8. The board shows the top 6 next to the money ladder, with everyone's two best subjects. The final results screen shows the play-along leaderboard under the players.
+9. **Picking the 5th grader:** when it's time for a new 5th grader, the picker lists everyone in the play-along by score, with their subjects and how many they've gotten right. Tap one to make them the 5th grader.
+
+The subjects to choose from are Math; Measurement & Time; Geometry & Shapes; Grammar; Spelling & Vocabulary; Reading & Literature; Animals & Life Science; Earth Science; Space Science; Physical Science; Human Body & Health; U.S. History; World History; Geography; Government & Civics; and Art & Music. To change the list, edit `SUBJECTS` at the top of `js/audience.js`.
 
 If you refresh the game, play-along comes back with the same room code and everyone's scores. Phones reconnect by themselves if they sleep or lose Wi-Fi for a moment. **Reset scores** starts the leaderboard over and **New room code** opens a fresh room (everyone has to join again). Scores carry over if you press **Play this episode again**.
 

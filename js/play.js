@@ -5,7 +5,7 @@
 // answer is revealed on the TV. Faster right answers are worth more.
 
 import { Relay, brokerFor, cleanCode, TOPIC_ROOT } from "./relay.js?v=__V__";
-import { speedPoints, MAX_POINTS, MIN_POINTS, DROP_MS } from "./audience.js?v=__V__";
+import { speedPoints, MAX_POINTS, MIN_POINTS, DROP_MS, SUBJECTS, cleanSubjects } from "./audience.js?v=__V__";
 
 const STORE_KEY = "smarter5th.play.v1";
 const ORDINALS = { 1: "1st", 2: "2nd", 3: "3rd" };
@@ -30,7 +30,8 @@ function store() {
   }
 }
 
-const me = Object.assign({ id: "p" + Math.random().toString(36).slice(2, 12), name: "", code: "", joined: false, last: {} }, load() || {});
+const me = Object.assign({ id: "p" + Math.random().toString(36).slice(2, 12), name: "", code: "", joined: false, last: {}, subjects: [] }, load() || {});
+me.subjects = cleanSubjects(me.subjects);
 const params = new URLSearchParams(location.search);
 const linkCode = cleanCode(params.get("code"));
 if (linkCode && linkCode !== me.code) {
@@ -87,7 +88,7 @@ function sendJoin(force = false) {
   if (!relay) return;
   if (!force && Date.now() - lastJoinSent < 3000) return;
   lastJoinSent = Date.now();
-  relay.publish(topic + "/h", { t: "join", id: me.id, name: me.name });
+  relay.publish(topic + "/h", { t: "join", id: me.id, name: me.name, subj: me.subjects });
 }
 
 // Check in now and then so the host knows we're still here.
@@ -140,7 +141,9 @@ function render() {
   const mine = view?.players?.[me.id];
   const dot = status === "live" ? "live" : status === "down" ? "down" : "connecting";
   document.getElementById("pp-top").innerHTML = `
-    <div class="pp-me"><span class="aud-dot ${dot}"></span><strong>${esc(me.name)}</strong></div>
+    <div class="pp-me"><span class="aud-dot ${dot}"></span><strong>${esc(me.name)}</strong>${
+      me.subjects.length ? `<span class="pp-subj">${me.subjects.map(esc).join(" · ")}</span>` : ""
+    }</div>
     <div class="pp-score">${
       mine ? `${pts(mine.p)} pts${view.count > 1 ? ` · #${mine.r} of ${view.count}` : ""}` : status === "live" ? "Joining…" : "Connecting…"
     }</div>`;
@@ -266,6 +269,20 @@ function lbHtml(mine) {
   }</ol></div>`;
 }
 
+function subjectSelect(id, label, value) {
+  return `<label>${label}<select id="${id}">
+    <option value="">Choose a subject…</option>
+    ${SUBJECTS.map((x) => `<option ${x === value ? "selected" : ""}>${esc(x)}</option>`).join("")}
+  </select></label>`;
+}
+
+// Keep what was typed and picked when the form redraws with an error.
+function keepPicks(s1, s2) {
+  me.subjects = [s1, s2];
+  me.name = document.getElementById("pp-name").value;
+  me.code = cleanCode(document.getElementById("pp-code").value);
+}
+
 function renderJoin() {
   formKey = "";
   app.innerHTML = `<main class="pp pp-join">
@@ -283,6 +300,12 @@ function renderJoin() {
       <form id="pp-join" class="pp-join-form" autocomplete="off">
         <label>Room code<input id="pp-code" maxlength="5" autocapitalize="characters" autocorrect="off" spellcheck="false" placeholder="5 letters" value="${esc(me.code)}"></label>
         <label>Your name<input id="pp-name" maxlength="20" autocorrect="off" placeholder="Name for the leaderboard" value="${esc(me.name)}"></label>
+        <fieldset class="pp-subjects">
+          <legend>What subjects are you best at?</legend>
+          <p class="small">The players will see these when they pick their next 5th grader.</p>
+          ${subjectSelect("pp-subj1", "Best subject", me.subjects[0])}
+          ${subjectSelect("pp-subj2", "Second best", me.subjects[1])}
+        </fieldset>
         ${joinError ? `<p class="error">${esc(joinError)}</p>` : ""}
         <button class="btn btn-red big" type="submit">Join</button>
       </form>
@@ -300,6 +323,19 @@ function renderJoin() {
       joinError = "Add a name for the leaderboard.";
       return renderJoin();
     }
+    const s1 = document.getElementById("pp-subj1").value;
+    const s2 = document.getElementById("pp-subj2").value;
+    if (!s1 || !s2) {
+      joinError = "Pick your two best subjects.";
+      keepPicks(s1, s2);
+      return renderJoin();
+    }
+    if (s1 === s2) {
+      joinError = "Pick two different subjects.";
+      keepPicks(s1, s2);
+      return renderJoin();
+    }
+    me.subjects = cleanSubjects([s1, s2]);
     joinError = "";
     Object.assign(me, { code, name, joined: true });
     store();

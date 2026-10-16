@@ -18,6 +18,7 @@ import {
   isRevealed,
   joinUrl,
   shortUrl,
+  SUBJECTS,
   MAX_POINTS,
   MIN_POINTS,
   DROP_MS,
@@ -365,10 +366,12 @@ const actions = {
   },
   continue: () => finishQuestion(),
 
-  pickClassmate: ({ id }) => {
+  pickClassmate: ({ id, name: audName }) => {
     let pick;
     if (id) {
       pick = { playerId: id };
+    } else if (audName) {
+      pick = { name: audName };
     } else {
       const name = (document.getElementById("other-classmate")?.value || "").trim();
       if (!name) return document.getElementById("other-classmate")?.focus();
@@ -718,6 +721,7 @@ function renderPicker() {
           )
           .join("")}
       </div>
+      ${aud.on ? audSlot("pickerAud") : ""}
       <form class="add-player" onsubmit="return false">
         <input id="other-classmate" placeholder="Someone else in the room" autocomplete="off" maxlength="24" />
         <button class="btn btn-yellow" data-action="pickClassmate">Choose</button>
@@ -951,6 +955,7 @@ function audienceQuestion() {
 // them, not the whole screen (which would restart a video or close the keyboard).
 const AUD_SLOTS = {
   setup: audSetupCard,
+  pickerAud: audPickerList,
   corner: audCorner,
   boardLb: audBoardLeaderboard,
   strip: audStrip,
@@ -1039,11 +1044,37 @@ function audCorner() {
   </button>`;
 }
 
+const subjectTags = (r) =>
+  r.subjects.length ? `<span class="lb-subj">${r.subjects.map((x) => `<span>${esc(x)}</span>`).join("")}</span>` : "";
+
+const record = (r) => (r.answered ? `${r.right}/${r.answered} right` : "");
+
 function lbRows(rows, max) {
   return rows
     .slice(0, max)
-    .map((r) => `<li><span class="lb-rank">${r.rank}</span><span class="lb-name">${esc(r.name)}</span><b>${pts(r.pts)}</b></li>`)
+    .map(
+      (r) => `<li><span class="lb-rank">${r.rank}</span><span class="lb-name">${esc(r.name)}${subjectTags(r)}</span><b>${pts(r.pts)}</b></li>`
+    )
     .join("");
+}
+
+// In the 5th grader picker: the play-along crowd, best first, with what they're good at.
+function audPickerList() {
+  const rows = audStandings();
+  if (!rows.length) return "";
+  const went = (name) => state.pastClassmates.includes(name);
+  return `<div class="picker-aud">
+    <h3>📱 From the play-along</h3>
+    <ul>${rows
+      .map(
+        (r) => `<li><button class="aud-pick ${went(r.name) ? "went" : ""}" data-action="pickClassmate" data-name="${esc(r.name)}">
+          <span class="lb-rank">${r.rank}</span>
+          <span class="aud-pick-name">${esc(r.name)}${went(r.name) ? ` <em>already went</em>` : ""}${subjectTags(r)}</span>
+          <span class="aud-pick-score"><b>${pts(r.pts)}</b><small>${record(r)}</small></span>
+        </button></li>`
+      )
+      .join("")}</ul>
+  </div>`;
 }
 
 function audBoardLeaderboard() {
@@ -1053,7 +1084,7 @@ function audBoardLeaderboard() {
     <h3>📱 Play-along</h3>
     ${
       rows.length
-        ? `<ol class="lb">${lbRows(rows, 8)}</ol>${rows.length > 8 ? `<p class="small">+${rows.length - 8} more · press 0 for all</p>` : ""}`
+        ? `<ol class="lb">${lbRows(rows, 6)}</ol>${rows.length > 6 ? `<p class="small">+${rows.length - 6} more · press 0 for the top 10</p>` : ""}`
         : `<p class="small">Nobody yet. Join with room <b>${esc(aud.code || "…")}</b>.</p>`
     }
   </div>`;

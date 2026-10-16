@@ -14,6 +14,32 @@ export const MIN_POINTS = 100;
 export const DROP_MS = 30000; // a right answer loses value over this long, then stays at MIN_POINTS
 const ACTIVE_MS = 70000; // a phone counts as here if it checked in this recently
 
+// Subjects people can say they're best at, in the spirit of the show's categories.
+export const SUBJECTS = [
+  "Math",
+  "Measurement & Time",
+  "Geometry & Shapes",
+  "Grammar",
+  "Spelling & Vocabulary",
+  "Reading & Literature",
+  "Animals & Life Science",
+  "Earth Science",
+  "Space Science",
+  "Physical Science",
+  "Human Body & Health",
+  "U.S. History",
+  "World History",
+  "Geography",
+  "Government & Civics",
+  "Art & Music",
+];
+
+// Up to two known subjects, no repeats.
+export function cleanSubjects(list) {
+  if (!Array.isArray(list)) return [];
+  return [...new Set(list.filter((x) => SUBJECTS.includes(x)))].slice(0, 2);
+}
+
 export const aud = {
   on: false,
   status: "off", // off | connecting | live | down | error
@@ -236,8 +262,9 @@ function handle(m) {
       .slice(0, 20);
     if (!name) return;
     const known = aud.players[m.id];
-    aud.players[m.id] = { name, seen: now };
-    if (!known || known.name !== name) {
+    const subjects = cleanSubjects(m.subj);
+    aud.players[m.id] = { name, seen: now, subjects };
+    if (!known || known.name !== name || (known.subjects || []).join("|") !== subjects.join("|")) {
       save();
       onChange();
     }
@@ -293,11 +320,32 @@ export function scores() {
   return total;
 }
 
+// How many revealed questions each person answered, and how many they got right.
+function records() {
+  const out = {};
+  for (const pid of aud.revealed) {
+    for (const [id, g] of Object.entries(aud.books[pid] || {})) {
+      const r = (out[id] ||= { answered: 0, right: 0 });
+      r.answered++;
+      if (g.ok) r.right++;
+    }
+  }
+  return out;
+}
+
 // Players sorted by score, with shared ranks for ties.
 export function standings() {
   const total = scores();
+  const rec = records();
   const rows = Object.entries(aud.players)
-    .map(([id, p]) => ({ id, name: p.name, pts: total[id] || 0 }))
+    .map(([id, p]) => ({
+      id,
+      name: p.name,
+      pts: total[id] || 0,
+      subjects: p.subjects || [],
+      right: rec[id]?.right || 0,
+      answered: rec[id]?.answered || 0,
+    }))
     .sort((a, b) => b.pts - a.pts || a.name.localeCompare(b.name));
   let rank = 0;
   let prev = null;
