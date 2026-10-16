@@ -1,4 +1,28 @@
 import { playSound, stopSound, toggleMute, isMuted, mediaUrl } from "./sounds.js?v=__V__";
+import {
+  aud,
+  loadAudience,
+  startAudience,
+  stopAudience,
+  resetScores,
+  newRoom,
+  setOnChange,
+  syncQuestion,
+  standings as audStandings,
+  questionStats,
+  answerGroups,
+  flipAnswers,
+  playerCount,
+  activeCount,
+  currentPid,
+  isRevealed,
+  joinUrl,
+  shortUrl,
+  MAX_POINTS,
+  MIN_POINTS,
+  DROP_MS,
+} from "./audience.js?v=__V__";
+import qrcode from "./vendor/qrcode.mjs";
 
 // ---------------------------------------------------------------------------
 // Rules
@@ -38,6 +62,7 @@ function freshState() {
     asked: 0,
     current: null,
     overlay: null,
+    runId: Math.random().toString(36).slice(2, 7), // keeps play-along scores apart between games
   };
 }
 
@@ -381,6 +406,31 @@ const actions = {
     toggleMute();
     render();
   },
+
+  audOn: () => startAudience(),
+  audOff: () => stopAudience(),
+  audReset: () => {
+    if (confirm("Start the play-along leaderboard over from zero?")) resetScores();
+  },
+  audNewRoom: () => {
+    if (confirm("Open a new room? Everyone on their phones will have to join again.")) newRoom();
+  },
+  audBoard: () => {
+    aud.board = !aud.board;
+    aud.review = false;
+    updateAudience();
+  },
+  audReview: () => {
+    aud.review = !aud.review;
+    aud.board = false;
+    updateAudience();
+  },
+  audClose: () => {
+    aud.board = false;
+    aud.review = false;
+    updateAudience();
+  },
+  audFlip: ({ key }) => flipAnswers(key),
 };
 
 function finishQuestion() {
@@ -485,7 +535,9 @@ function render() {
     millionIntro: renderMillionIntro,
     results: renderResults,
   };
-  app.innerHTML = screens[state.screen]() + renderOverlay() + renderMute();
+  syncQuestion(audienceQuestion());
+  renderedAudOn = aud.on;
+  app.innerHTML = screens[state.screen]() + renderOverlay() + audSlot("overlay") + audSlot("corner") + renderMute();
   save();
   if (state.screen === "setup") {
     const input = document.getElementById("player-name");
@@ -560,6 +612,7 @@ function renderSetup() {
           <li>Players who are out keep answering for bragging rights: most correct answers breaks ties.</li>
         </ul>
       </details>
+      ${audSlot("setup")}
       <div class="row">
         <button class="btn btn-ghost" data-action="backToLoader">Back</button>
         <button class="btn btn-red" data-action="startGame" ${state.players.length ? "" : "disabled"}>Ring the bell →</button>
@@ -623,7 +676,7 @@ function renderBoard() {
       <button class="btn btn-ghost small" data-action="endGame">End game</button>
     </header>
     ${nobodyIn ? `<div class="banner">Everyone is out of the money. The rest of the board is for bragging rights — most correct answers breaks the tie.</div>` : ""}
-    <div class="board-layout">
+    <div class="board-layout ${aud.on ? "with-aud" : ""}">
       <div class="tiles">
         ${qs
           .map((q, i) => [q, i])
@@ -638,6 +691,7 @@ function renderBoard() {
           .join("")}
       </div>
       ${renderLadder()}
+      ${aud.on ? audSlot("boardLb") : ""}
     </div>
     ${renderScoreboard()}
     ${needsPick() ? renderPicker() : ""}
@@ -789,7 +843,10 @@ function renderQuestion() {
     </section>
     ${done ? "" : `<section class="chips">${mateChip}${chips}</section>
     <footer class="q-footer">
-      ${!revealed && !million ? `<button class="btn btn-ghost" data-action="backToBoard">← Board (Esc)</button>` : "<span></span>"}
+      <div class="row left">
+        ${!revealed && !million ? `<button class="btn btn-ghost" data-action="backToBoard">← Board (Esc)</button>` : ""}
+        ${aud.on ? audSlot("strip") : ""}
+      </div>
       ${
         revealed
           ? `<div class="row">
@@ -845,6 +902,7 @@ function renderResults() {
         .join("")}
     </ol>
     <p class="muted small">Ranked by money banked, then by total correct answers.</p>
+    ${aud.on ? audSlot("final") : ""}
     <div class="row">
       <button class="btn btn-ghost" data-action="backToLoader">Pick another episode</button>
       <button class="btn btn-red" data-action="newGame">Play this episode again</button>
@@ -865,6 +923,198 @@ function renderOverlay() {
         <p>The answer was <b>${esc(state.lastAnswer)}</b>.</p>
         <p class="say-it">Now say it to the camera:<br/><span>“I am not smarter than a former 5th grader!”</span></p>
         <button class="btn btn-yellow" data-action="closeOverlay">Continue (Space)</button>
+      </div>
+    </div>`;
+  }
+  return "";
+}
+
+// ---------------------------------------------------------------------------
+// Audience play-along
+// ---------------------------------------------------------------------------
+
+// What the phones should see right now: the question on screen, or nothing.
+function audienceQuestion() {
+  const c = state.current;
+  if (state.screen !== "question" || !c) return null;
+  const million = c.kind === "million";
+  return {
+    pid: `${state.runId}:${million ? "m" : c.tile}`,
+    open: c.phase === "asking",
+    revealed: c.phase !== "asking",
+    q: currentQuestion(),
+    million,
+  };
+}
+
+// Audience bits live in their own slots so a phone joining or answering only redraws
+// them, not the whole screen (which would restart a video or close the keyboard).
+const AUD_SLOTS = {
+  setup: audSetupCard,
+  corner: audCorner,
+  boardLb: audBoardLeaderboard,
+  strip: audStrip,
+  final: audFinal,
+  overlay: audOverlay,
+};
+
+function audSlot(name) {
+  return `<div class="aud-slot aud-slot-${name}" data-aud="${name}">${AUD_SLOTS[name]()}</div>`;
+}
+
+let renderedAudOn = false;
+
+// Called whenever the play-along changes. Turning it on or off changes the layout, so that
+// redraws everything; anything else just refreshes the audience slots.
+function onAudienceChange() {
+  if (aud.on !== renderedAudOn) return render();
+  updateAudience();
+}
+
+function updateAudience() {
+  for (const el of document.querySelectorAll("[data-aud]")) {
+    const html = AUD_SLOTS[el.dataset.aud]();
+    if (el.innerHTML !== html) el.innerHTML = html;
+  }
+}
+
+const qrCache = new Map();
+function qrSvg(text) {
+  if (qrCache.has(text)) return qrCache.get(text);
+  const qr = qrcode(0, "M");
+  qr.addData(text);
+  qr.make();
+  const n = qr.getModuleCount();
+  let d = "";
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) d += `M${c + 2} ${r + 2}h1v1h-1z`;
+  const svg = `<svg class="qr" viewBox="0 0 ${n + 4} ${n + 4}" shape-rendering="crispEdges" aria-label="QR code"><rect width="${n + 4}" height="${n + 4}" fill="#fff"/><path d="${d}" fill="#000"/></svg>`;
+  qrCache.set(text, svg);
+  return svg;
+}
+
+const audStatusText = () =>
+  ({ connecting: "Connecting…", live: "Live", down: "Reconnecting…", error: "Couldn't connect", off: "Off" })[aud.status] || aud.status;
+const pts = (n) => Number(n).toLocaleString("en-US");
+
+function audSetupCard() {
+  if (!aud.on) {
+    return `<div class="aud-card">
+      <div class="aud-info">
+        <h3>📱 Audience play-along</h3>
+        <p class="small">Everyone who isn't playing can answer along on their phone. The faster they lock in a right answer, the more points (up to ${pts(MAX_POINTS)}), and a leaderboard runs all game.</p>
+        ${aud.status === "error" ? `<p class="error">${esc(aud.error)}</p>` : ""}
+      </div>
+      <button class="btn btn-yellow" data-action="audOn">Turn on play-along</button>
+    </div>`;
+  }
+  const rows = audStandings();
+  return `<div class="aud-card on">
+    <div class="aud-qr">${aud.code && aud.status !== "connecting" ? qrSvg(joinUrl()) : ""}</div>
+    <div class="aud-info">
+      <h3>📱 Audience play-along <span class="aud-pill ${aud.status}">${audStatusText()}</span></h3>
+      ${
+        aud.code
+          ? `<p class="aud-code">Room <strong>${esc(aud.code)}</strong></p><p class="small">Scan the code or go to <b>${esc(shortUrl())}</b></p>`
+          : `<p class="small">Opening a room…</p>`
+      }
+      ${aud.status === "error" ? `<p class="error">${esc(aud.error)}</p>` : ""}
+      <p class="aud-names">${rows.length ? `${rows.length} joined: ${rows.map((r) => esc(r.name)).join(", ")}` : "Nobody's joined yet."}</p>
+      <div class="row left">
+        <button class="btn btn-ghost small" data-action="audReset" ${rows.some((r) => r.pts) ? "" : "disabled"}>Reset scores</button>
+        <button class="btn btn-ghost small" data-action="audNewRoom">New room code</button>
+        <button class="btn btn-ghost small" data-action="audOff">Turn off</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// The room code in the corner of every game screen, so people can join any time.
+function audCorner() {
+  if (!aud.on || !["board", "question", "millionIntro"].includes(state.screen)) return "";
+  const n = playerCount();
+  return `<button class="aud-corner" data-action="audBoard" title="Show the play-along leaderboard (0)">
+    <span class="aud-dot ${aud.status}"></span> 📱 Play along: <b>${esc(aud.code || "…")}</b>
+    <span class="aud-corner-url">${esc(aud.code ? shortUrl() : "")}</span>
+    <span class="aud-corner-n">${n} playing</span>
+  </button>`;
+}
+
+function lbRows(rows, max) {
+  return rows
+    .slice(0, max)
+    .map((r) => `<li><span class="lb-rank">${r.rank}</span><span class="lb-name">${esc(r.name)}</span><b>${pts(r.pts)}</b></li>`)
+    .join("");
+}
+
+function audBoardLeaderboard() {
+  if (!aud.on) return "";
+  const rows = audStandings();
+  return `<div class="aud-lb">
+    <h3>📱 Play-along</h3>
+    ${
+      rows.length
+        ? `<ol class="lb">${lbRows(rows, 8)}</ol>${rows.length > 8 ? `<p class="small">+${rows.length - 8} more · press 0 for all</p>` : ""}`
+        : `<p class="small">Nobody yet. Join with room <b>${esc(aud.code || "…")}</b>.</p>`
+    }
+  </div>`;
+}
+
+// Under the question: how many phones have answered, and after the reveal, how they did.
+function audStrip() {
+  const pid = currentPid();
+  if (!aud.on || !pid) return "";
+  const st = questionStats(pid);
+  const n = playerCount();
+  if (!isRevealed(pid)) {
+    return `<span class="aud-strip">📱 ${st.answered} of ${n} locked in</span>`;
+  }
+  return `<span class="aud-strip">📱 ${st.right} of ${st.answered} right${
+    st.fastest ? ` · fastest: <b>${esc(st.fastest.name)}</b> +${pts(st.fastest.pts)}` : ""
+  }</span>${st.answered ? `<button class="btn btn-ghost small" data-action="audReview">Check answers</button>` : ""}`;
+}
+
+function audFinal() {
+  const rows = audStandings();
+  if (!rows.length) return "";
+  return `<div class="aud-final"><h3>📱 Play-along leaderboard</h3><ol class="lb">${lbRows(rows, 10)}</ol></div>`;
+}
+
+function audOverlay() {
+  if (!aud.on) return "";
+  if (aud.review && currentPid() && isRevealed(currentPid())) {
+    const groups = answerGroups();
+    return `<div class="overlay aud-overlay">
+      <div class="overlay-card aud-review">
+        <h2>📱 Play-along answers</h2>
+        <p class="muted-ink">Tap an answer to flip it between right and wrong. Everyone who gave that answer changes together.</p>
+        <ul class="aud-groups">
+          ${groups
+            .map(
+              (g) => `<li><button class="aud-group ${g.ok ? "ok" : "no"}" data-action="audFlip" data-key="${esc(g.key)}">
+                <span class="mark-ico">${g.ok ? "✓" : "✗"}</span><span class="aud-group-text">${esc(g.text)}</span><span class="aud-group-n">×${g.count}</span>
+              </button></li>`
+            )
+            .join("")}
+        </ul>
+        <button class="btn btn-yellow" data-action="audClose">Done (Esc)</button>
+      </div>
+    </div>`;
+  }
+  if (aud.board) {
+    const rows = audStandings();
+    return `<div class="overlay aud-overlay">
+      <div class="overlay-card aud-big">
+        <div class="aud-big-lb">
+          <h2>📱 Play-along leaderboard</h2>
+          ${rows.length ? `<ol class="lb big">${lbRows(rows, 10)}</ol>` : `<p class="muted-ink">Nobody's joined yet.</p>`}
+          <p class="small muted-ink">Right answers score ${pts(MAX_POINTS)} down to ${pts(MIN_POINTS)}, faster is better (over ${DROP_MS / 1000} seconds).</p>
+        </div>
+        <div class="aud-big-join">
+          ${aud.code ? qrSvg(joinUrl()) : ""}
+          <p>Room <strong>${esc(aud.code || "…")}</strong></p>
+          <p class="small">${esc(aud.code ? shortUrl() : "")}</p>
+        </div>
+        <button class="btn btn-yellow" data-action="audClose">Close (0)</button>
       </div>
     </div>`;
   }
@@ -910,6 +1160,11 @@ document.addEventListener("keydown", (e) => {
     actions.toggleMute();
     return;
   }
+  if (e.key === "0" && aud.on) return actions.audBoard();
+  if ((aud.board || aud.review) && (e.key === "Escape" || e.key === " " || e.key === "Enter")) {
+    e.preventDefault();
+    return actions.audClose();
+  }
   if (e.key === "Escape") {
     if (state.screen === "question") actions.backToBoard();
     return;
@@ -930,6 +1185,8 @@ document.addEventListener("keydown", (e) => {
 // ---------------------------------------------------------------------------
 
 async function init() {
+  setOnChange(onAudienceChange);
+  if (loadAudience()) startAudience();
   try {
     const res = await fetch("games/index.json", { cache: "no-cache" });
     gameList = res.ok ? await res.json() : [];

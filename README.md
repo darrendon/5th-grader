@@ -27,8 +27,26 @@ The game saves itself in the browser, so a refresh or a closed tab won't lose a 
 - **Space / Enter:** pencils down, continue, dismiss pop-ups
 - **Escape:** back to the board (before the answer is revealed)
 - **M:** mute or unmute
+- **0:** show or hide the play-along leaderboard
 
 You can link straight to an episode with `?game=episode1` at the end of the site address.
+
+## Audience play-along
+
+Everyone who isn't playing can answer along on their phone, with a leaderboard that runs all game. It works the same way as the Wheel of Fortune play-along: messages go through a free public relay, so there's nothing to sign up for or set up.
+
+1. On the setup screen, press **Turn on play-along**. You get a 5-letter room code and a QR code.
+2. People scan the QR code (or go to the site address with `/play` on the end and type the room code), enter a name, and they're in. They can join any time: the room code stays in the bottom corner during the game, and pressing **0** shows a big QR code with the leaderboard.
+3. Each question shows up on their phones as soon as it's on the TV. Multiple choice questions get tap-to-pick buttons; the rest get a text box. **One answer per question.**
+4. **Scoring:** a right answer is worth 1,000 points if it's locked in right away, dropping to 100 points over 30 seconds. After that it stays at 100. Wrong answers are worth nothing. The million-dollar question uses the same scale.
+5. **No spoilers:** phones only say "Locked in" until you reveal the answer, and the answer never reaches the phones before then.
+6. Answers are checked automatically. Capitals and punctuation don't matter, longer words forgive a typo or two, and number answers just need the right number ("210 minutes" counts). Under the question you'll see how many people locked in, and after the reveal how many got it and who was fastest.
+7. If the checker got something wrong, press **Check answers** after the reveal. It lists every answer people gave; tap one to flip it between right and wrong (everyone who gave that answer changes together).
+8. The board shows the top 8 next to the money ladder, and the final results screen shows the play-along leaderboard under the players.
+
+If you refresh the game, play-along comes back with the same room code and everyone's scores. Phones reconnect by themselves if they sleep or lose Wi-Fi for a moment. **Reset scores** starts the leaderboard over and **New room code** opens a fresh room (everyone has to join again). Scores carry over if you press **Play this episode again**.
+
+The game tab has to stay open, since it's what checks the answers. Messages go through public relays that anyone could listen in on, so the play-along never sends an answer before it's revealed. That's fine for a party, but don't use it for anything private.
 
 ## Editing the questions
 
@@ -63,6 +81,8 @@ An episode has 10 questions (two per grade, 1st through 5th) and a million-dolla
 | `question`, `answer` | What's shown, and what's revealed |
 | `choices` | Optional list for multiple choice or true/false, e.g. `["True", "False"]`. Write `answer` exactly as it appears in the list so it highlights |
 | `note` | Optional small print under the answer, e.g. `"All three needed."` |
+| `accept` | Other answers the play-along should count as right, e.g. `["seven"]` or `["Madison"]` |
+| `needs` | Words that must all be in a play-along answer, in any order, e.g. `["igneous", "sedimentary", "metamorphic"]` |
 
 Questions can have any number of entries and the board grows to fit, though the money ladder is built for 10. Leave out `million` to skip the million-dollar round.
 

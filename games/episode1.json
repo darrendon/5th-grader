@@ -12,7 +12,10 @@
       "subject": "Calendar",
       "question": "How many months of the year have 31 days?",
       "answer": "7",
-      "note": "January, March, May, July, August, October, December"
+      "note": "January, March, May, July, August, October, December",
+      "accept": [
+        "seven"
+      ]
     },
     {
       "grade": 2,
@@ -59,20 +62,31 @@
       "subject": "Earth Science",
       "question": "Name the three main types of rock.",
       "answer": "Igneous, sedimentary and metamorphic",
-      "note": "All three needed."
+      "note": "All three needed.",
+      "needs": [
+        "igneous",
+        "sedimentary",
+        "metamorphic"
+      ]
     },
     {
       "grade": 5,
       "subject": "Parts of Speech",
       "question": "What part of speech are words like “and,” “but” and “or”?",
       "answer": "Conjunctions",
-      "note": "Also accept: coordinating conjunctions"
+      "note": "Also accept: coordinating conjunctions",
+      "accept": [
+        "coordinating conjunctions"
+      ]
     },
     {
       "grade": 5,
       "subject": "U.S. History",
       "question": "Who was president during the War of 1812?",
-      "answer": "James Madison"
+      "answer": "James Madison",
+      "accept": [
+        "Madison"
+      ]
     }
   ],
   "million": {
