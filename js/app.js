@@ -964,7 +964,7 @@ function renderOverlay() {
         <div class="flunk-f">F</div>
         <h2>${names} flunked out!</h2>
         <p>The answer was <b>${esc(state.lastAnswer)}</b>.</p>
-        <p class="say-it">Now say it to the camera:<br/><span>“I am not smarter than a former 5th grader!”</span></p>
+        <p class="say-it">Now say it to the audience:<br/><span>“I am not smarter than a former 5th grader!”</span></p>
         <button class="btn btn-yellow" data-action="closeOverlay">Continue (Space)</button>
       </div>
     </div>`;
