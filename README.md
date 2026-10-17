@@ -31,6 +31,25 @@ The game saves itself in the browser, so a refresh or a closed tab won't lose a 
 
 You can link straight to an episode with `?game=episode1` at the end of the site address.
 
+## Host screen and board
+
+The game runs in two windows in the same browser on one computer:
+
+- **Host screen** (the normal site address): every control, plus the answer to each question before you reveal it (in a dashed box marked "Only you can see this"). Keep this one on your laptop.
+- **Board** (press **📺 Open board**, or add `?view=board` to the site address): just what the room should see — the subject board, the money ladder and players, each question with its grade, subject and choices, the ✓ and ✗ after the reveal, the 5th grader, the flunk-out "Now say it to the audience" moment, final results and the play-along room code. It never shows an answer before you reveal it, and none of your buttons. This is the window for the TV.
+
+Once the board is open, the button on the host screen turns into **📺 Board on**.
+
+To put the board on the TV (HDMI as a second display, set to "extend" rather than "mirror"):
+
+1. Press **📺 Open board** and drag the new window onto the TV.
+2. Click the board once so the browser lets it play sound. Until you do, it shows a "Click here once" reminder at the bottom. The sounds then come out of the TV instead of your laptop.
+3. Press **F** on the board to go full screen. This uses the browser's own full-screen mode, so unlike **F11** the toolbar doesn't drop down over the board when your mouse crosses back to the laptop screen. Press **Esc** on the board to leave it.
+
+If you refresh or close the board, open it again and it picks up right where the game is. For an audio or video question, click play on the board so the room sees and hears it.
+
+If the board isn't open, everything still works from the host screen alone, exactly as before: answers stay hidden until you reveal them and the sound plays from the laptop, so you can put that one window on the TV instead. The audience play-along always runs from the host screen.
+
 ## Audience play-along
 
 Everyone who isn't playing can answer along on their phone, with a leaderboard that runs all game. It works the same way as the Wheel of Fortune play-along: messages go through a free public relay, so there's nothing to sign up for or set up.
@@ -49,7 +68,7 @@ The subjects to choose from are Math; Measurement & Time; Geometry & Shapes; Gra
 
 If you refresh the game, play-along comes back with the same room code and everyone's scores. Phones reconnect by themselves if they sleep or lose Wi-Fi for a moment. **Reset scores** starts the leaderboard over and **New room code** opens a fresh room (everyone has to join again). Scores carry over if you press **Play this episode again**.
 
-The game tab has to stay open, since it's what checks the answers. Messages go through public relays that anyone could listen in on, so the play-along never sends an answer before it's revealed. That's fine for a party, but don't use it for anything private.
+The host screen has to stay open, since it's what checks the answers. Messages go through public relays that anyone could listen in on, so the play-along never sends an answer before it's revealed. That's fine for a party, but don't use it for anything private.
 
 ## Editing the questions
 

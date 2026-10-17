@@ -66,6 +66,11 @@ export function toggleMute() {
   return muted;
 }
 
+export function setMuted(value) {
+  muted = Boolean(value);
+  if (muted) stopSound();
+}
+
 export function isMuted() {
   return muted;
 }

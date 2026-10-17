@@ -1,4 +1,4 @@
-import { playSound, stopSound, toggleMute, isMuted, mediaUrl } from "./sounds.js?v=__V__";
+import { playSound, stopSound, toggleMute, setMuted, isMuted, mediaUrl } from "./sounds.js?v=__V__";
 import {
   aud,
   loadAudience,
@@ -43,6 +43,37 @@ const STORE_KEY = "smarter5th.state.v1";
 const CLASSMATE = "__classmate"; // key for the 5th grader's mark when they aren't a player
 const QUESTIONS_PER_CLASSMATE = 2; // a new 5th grader is chosen every 2 questions
 
+// Two views of one game. The host page (index.html) has every control and, once the board is
+// open, shows the answer to each question before the reveal. The board (index.html?view=board)
+// is the window for the TV: it only shows what the room should see, and it plays the sounds.
+// They talk over a BroadcastChannel, so both need to be open in the same browser on the same
+// computer. The host page is the only one that runs the game and the audience play-along.
+const IS_BOARD = new URLSearchParams(location.search).get("view") === "board";
+const channel = "BroadcastChannel" in window ? new BroadcastChannel("smarter-5th") : null;
+const send = (msg) => channel?.postMessage(msg);
+let boardSeenAt = 0; // host: when the board last checked in
+const boardOpen = () => !IS_BOARD && Date.now() - boardSeenAt < 6000;
+let musicNow = null; // host: the looping music that should be playing
+let soundUnlocked = false; // board: browsers only allow sound after a click on the page
+let audView = null; // board: the play-along as the host sees it (the board never joins the relay)
+
+const LOOPING = new Set(["theme", "question", "million"]);
+
+// Play a sound cue: on the board if it's open (so it comes out of the TV), otherwise here.
+function cue(name) {
+  if (IS_BOARD) return;
+  musicNow = LOOPING.has(name) ? name : null; // any new cue stops the one before
+  send({ type: "sound", name });
+  if (!boardOpen()) playSound(name);
+}
+
+function cueStop() {
+  if (IS_BOARD) return;
+  musicNow = null;
+  send({ type: "stopSound" });
+  stopSound();
+}
+
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
@@ -69,6 +100,7 @@ function freshState() {
 }
 
 function save() {
+  if (IS_BOARD) return;
   try {
     if (state.game && state.screen !== "loader") localStorage.setItem(STORE_KEY, JSON.stringify(state));
   } catch {
@@ -210,7 +242,7 @@ function startSetup(game, id) {
   state.used = game.questions.map(() => false);
   state.screen = "setup";
   keepPlayers.forEach(addPlayer);
-  playSound("theme");
+  cue("theme");
   render();
 }
 
@@ -270,11 +302,11 @@ const actions = {
   startGame: () => {
     if (state.players.length === 0) return;
     state.screen = "board";
-    stopSound();
+    cueStop();
     render();
   },
   backToLoader: () => {
-    stopSound();
+    cueStop();
     const keep = state.players;
     state = freshState();
     state.players = keep;
@@ -287,7 +319,7 @@ const actions = {
     if (state.used[i] || needsPick()) return;
     state.current = { kind: "grade", tile: i, phase: "asking", marks: {}, cheats: {}, drops: [] };
     state.screen = "question";
-    playSound("question");
+    cue("question");
     render();
   },
   backToBoard: () => {
@@ -299,7 +331,7 @@ const actions = {
     }
     state.current = null;
     state.screen = "board";
-    stopSound();
+    cueStop();
     render();
   },
 
@@ -365,7 +397,7 @@ const actions = {
     const c = state.current;
     if (c.phase !== "asking") return;
     c.phase = "revealed";
-    playSound("reveal");
+    cue("reveal");
     render();
   },
   mark: ({ id, value }) => {
@@ -373,7 +405,7 @@ const actions = {
     if (c.phase !== "revealed") return;
     c.marks[id] = value === "1";
     if (value === "1") refundSave(id);
-    playSound(value === "1" ? "correct" : "wrong");
+    cue(value === "1" ? "correct" : "wrong");
     render();
   },
   markAll: ({ value }) => {
@@ -383,7 +415,7 @@ const actions = {
       if (value === "1") refundSave(p.id);
     }
     if (needsClassmate() && !state.classmate?.playerId) c.marks[CLASSMATE] = value === "1";
-    playSound(value === "1" ? "correct" : "wrong");
+    cue(value === "1" ? "correct" : "wrong");
     render();
   },
   continue: () => finishQuestion(),
@@ -415,7 +447,7 @@ const actions = {
     if (state.screen !== "millionIntro") return;
     state.current = { kind: "million", phase: "asking", marks: {}, cheats: {}, drops: [] };
     state.screen = "question";
-    playSound("question");
+    cue("question");
     render();
   },
 
@@ -429,7 +461,20 @@ const actions = {
   },
   toggleMute: () => {
     toggleMute();
+    send({ type: "mute", muted: isMuted() });
     render();
+  },
+  openBoard: () => {
+    window.open(`${location.pathname}?view=board`, "smarter-board");
+  },
+  unlockSound: () => {
+    if (soundUnlocked) return;
+    soundUnlocked = true;
+    render();
+    send({ type: "hello" }); // ask the host for whatever music should be playing now
+  },
+  fullscreen: () => {
+    document.documentElement.requestFullscreen?.().catch(() => {});
   },
 
   audOn: () => startAudience(),
@@ -515,7 +560,7 @@ function finishQuestion() {
 
   if (flunked.length) {
     state.overlay = { type: "flunk", names: flunked, million: c.kind === "million" };
-    playSound("flunk");
+    cue("flunk");
     render();
     return;
   }
@@ -530,14 +575,14 @@ function afterQuestion() {
   if (allUsed) {
     if (state.game.million && stillIn().length) {
       state.screen = "millionIntro";
-      playSound("million");
+      cue("million");
       render();
       return;
     }
     return toResults();
   }
   state.screen = "board";
-  stopSound();
+  cueStop();
   render();
 }
 
@@ -552,7 +597,7 @@ function toResults() {
   state.overlay = null;
   state.screen = "results";
   clearSaved();
-  playSound("winner");
+  cue("winner");
   render();
 }
 
@@ -563,16 +608,18 @@ function toResults() {
 function render() {
   const app = document.getElementById("app");
   const screens = {
-    loader: renderLoader,
-    setup: renderSetup,
+    loader: IS_BOARD ? renderBoardTitle : renderLoader,
+    setup: IS_BOARD ? renderBoardTitle : renderSetup,
     board: renderBoard,
     question: renderQuestion,
     millionIntro: renderMillionIntro,
     results: renderResults,
   };
-  syncQuestion(audienceQuestion());
+  if (!IS_BOARD) syncQuestion(audienceQuestion());
   renderedAudOn = aud.on;
-  app.innerHTML = screens[state.screen]() + renderOverlay() + audSlot("overlay") + audSlot("corner") + renderMute();
+  app.innerHTML =
+    screens[state.screen]() + renderOverlay() + audSlot("overlay") + audSlot("corner") + (IS_BOARD ? renderSoundPrompt() : renderMute());
+  if (!IS_BOARD) send({ type: "state", state, aud: audienceView() });
   save();
   if (state.screen === "setup") {
     const input = document.getElementById("player-name");
@@ -585,6 +632,41 @@ function render() {
 
 function renderMute() {
   return `<button class="mute" data-action="toggleMute" title="Mute (M)">${isMuted() ? "🔇" : "🔊"}</button>`;
+}
+
+function boardButton() {
+  return boardOpen()
+    ? `<button class="btn btn-ghost small board-on" data-action="openBoard" title="The board is open in another window">📺 Board on</button>`
+    : `<button class="btn btn-yellow small" data-action="openBoard" title="Open the board for the TV">📺 Open board</button>`;
+}
+
+function boardHint() {
+  return `<div class="board-hint">
+    ${boardButton()}
+    <span class="muted small">${
+      boardOpen()
+        ? "The board is open. Put that window on the TV and keep this one for yourself."
+        : "Open the board in a second window for the TV. This one becomes your host screen, with each answer before you reveal it."
+    }</span>
+  </div>`;
+}
+
+// ---- Board-only bits ----
+
+function renderBoardTitle() {
+  const g = state.game;
+  return `<main class="screen board-title">
+    ${logo()}
+    ${g ? `<p class="eyebrow">${esc(g.title || "")}</p>` : ""}
+    ${state.players.length ? `<div class="board-roster">${state.players.map((p) => `<span>${esc(p.name)}</span>`).join("")}</div>` : ""}
+    ${audSlot("boardJoin")}
+    <p class="muted">Waiting for the host to start…</p>
+  </main>`;
+}
+
+function renderSoundPrompt() {
+  if (soundUnlocked) return "";
+  return `<button class="sound-prompt" data-action="unlockSound">🔊 Click here once to turn on the board's sound</button>`;
 }
 
 function logo(small = false) {
@@ -612,6 +694,7 @@ function renderLoader() {
     ${logo()}
     <section class="card">
       ${resume ? `<button class="btn btn-yellow wide" data-action="resume">Resume game in progress · ${esc(resume.game.title || "")}</button>` : ""}
+      ${boardHint()}
       <h2>Pick an episode</h2>
       <div class="episodes">${games}</div>
       <button class="btn btn-ghost" data-action="pickFile">Load a game file…</button>
@@ -648,6 +731,7 @@ function renderSetup() {
         </ul>
       </details>
       ${audSlot("setup")}
+      ${boardHint()}
       <div class="row">
         <button class="btn btn-ghost" data-action="backToLoader">Back</button>
         <button class="btn btn-red" data-action="startGame" ${state.players.length ? "" : "disabled"}>Ring the bell →</button>
@@ -704,11 +788,11 @@ function renderBoard() {
         <div class="stake">${nobodyIn ? "Playing for bragging rights" : `Playing for ${money(LADDER[Math.min(state.asked, 9)])}`}</div>
         ${
           state.classmate && !needsPick()
-            ? `<div class="current-mate">🎒 5th grader: <b>${esc(classmateName())}</b> <button class="link" data-action="changeClassmate">change</button></div>`
+            ? `<div class="current-mate">🎒 5th grader: <b>${esc(classmateName())}</b>${IS_BOARD ? "" : ` <button class="link" data-action="changeClassmate">change</button>`}</div>`
             : ""
         }
       </div>
-      <button class="btn btn-ghost small" data-action="endGame">End game</button>
+      ${IS_BOARD ? "" : `<div class="row">${boardButton()}<button class="btn btn-ghost small" data-action="endGame">End game</button></div>`}
     </header>
     ${nobodyIn ? `<div class="banner">Everyone is out of the money. The rest of the board is for bragging rights — most correct answers breaks the tie.</div>` : ""}
     <div class="board-layout ${aud.on ? "with-aud" : ""}">
@@ -717,19 +801,21 @@ function renderBoard() {
           .map((q, i) => [q, i])
           // Highest grade on top, like the money ladder; same-grade tiles keep file order.
           .sort(([a, ai], [b, bi]) => (b.grade || 0) - (a.grade || 0) || ai - bi)
-          .map(
-            ([q, i]) => `<button class="tile grade-${Math.min(Math.max(q.grade || 1, 1), 5)} ${state.used[i] ? "used" : ""}" data-action="openTile" data-tile="${i}" ${state.used[i] ? "disabled" : ""}>
-              <span class="tile-grade">${q.grade ? gradeName(q.grade) : ""}</span>
-              <span class="tile-subject">${esc(q.subject || `Question ${i + 1}`)}</span>
-            </button>`
-          )
+          .map(([q, i]) => {
+            const inner = `<span class="tile-grade">${q.grade ? gradeName(q.grade) : ""}</span>
+              <span class="tile-subject">${esc(q.subject || `Question ${i + 1}`)}</span>`;
+            const cls = `tile grade-${Math.min(Math.max(q.grade || 1, 1), 5)} ${state.used[i] ? "used" : ""}`;
+            return IS_BOARD
+              ? `<div class="${cls}">${inner}</div>`
+              : `<button class="${cls}" data-action="openTile" data-tile="${i}" ${state.used[i] ? "disabled" : ""}>${inner}</button>`;
+          })
           .join("")}
       </div>
       ${renderLadder()}
       ${aud.on ? audSlot("boardLb") : ""}
     </div>
     ${renderScoreboard()}
-    ${needsPick() ? renderPicker() : ""}
+    ${needsPick() ? (IS_BOARD ? renderBoardPicker() : renderPicker()) : ""}
   </main>`;
 }
 
@@ -758,6 +844,21 @@ function renderPicker() {
         <input id="other-classmate" placeholder="Someone else in the room" autocomplete="off" maxlength="24" />
         <button class="btn btn-yellow" data-action="pickClassmate">Choose</button>
       </form>
+    </div>
+  </div>`;
+}
+
+// The room sees who's in the running while the group picks; the host clicks the pick.
+function renderBoardPicker() {
+  const went = (name) => state.pastClassmates.includes(name);
+  return `<div class="overlay">
+    <div class="overlay-card picker">
+      <div class="picker-icon">🎒</div>
+      <h2>Who's the new 5th grader?</h2>
+      <p class="muted-ink">Pick someone who hasn't gone yet.</p>
+      <div class="picker-options">
+        ${state.players.map((p) => `<span class="pick ${went(p.name) ? "went" : ""}">${esc(p.name)}${went(p.name) ? `<span>already went</span>` : ""}</span>`).join("")}
+      </div>
     </div>
   </div>`;
 }
@@ -795,6 +896,11 @@ function renderQuestion() {
         ${q.note ? `<div class="answer-note">${esc(q.note)}</div>` : ""}
       </div>`
     : "";
+  // Host screen only, while the board is open: the answer before the reveal.
+  const hostAnswer =
+    !revealed && boardOpen()
+      ? `<div class="host-answer"><span class="host-answer-tag">Only you can see this</span>Answer: <b>${esc(q.answer)}</b></div>`
+      : "";
 
   const parts = participants();
   const ready = revealed && allMarked();
@@ -807,7 +913,9 @@ function renderQuestion() {
       const dropping = c.drops.includes(p.id);
       const cheat = c.cheats[p.id];
       let controls = "";
-      if (!revealed) {
+      if (IS_BOARD) {
+        controls = boardChipNote(p);
+      } else if (!revealed) {
         if (p.status === "in" && !million && isClassmate(p)) {
           controls = `<span class="chip-note">🎒 the 5th grader — no cheats</span><button class="chip-btn drop ${dropping ? "active" : ""}" data-action="toggleDrop" data-id="${p.id}">${dropping ? `Dropping out · ${money(levelValue(p.level))}` : "Drop out"}</button>`;
         } else if (p.status === "in" && !million) {
@@ -862,7 +970,12 @@ function renderQuestion() {
     .join("");
 
   const mateChip =
-    revealed && needsClassmate() && !matePlayer
+    revealed && needsClassmate() && !matePlayer && IS_BOARD
+      ? `<div class="chip classmate-chip">
+          <div class="chip-head"><span class="chip-name">🎒 ${esc(classmateName())}</span><span class="tag">5th grader</span></div>
+          <div class="chip-controls">${markBadge(mateMark)}</div>
+        </div>`
+      : revealed && needsClassmate() && !matePlayer
       ? `<div class="chip classmate-chip">
           <div class="chip-head"><span class="chip-name">🎒 ${esc(classmateName())}</span><span class="tag">5th grader</span></div>
           <div class="chip-controls">
@@ -883,10 +996,12 @@ function renderQuestion() {
       ${choices}
       ${renderMedia(q, revealed)}
       ${answerBlock}
+      ${hostAnswer}
     </section>
     ${done ? "" : `<section class="chips">${mateChip}${chips}</section>
-    <footer class="q-footer">
+    ${IS_BOARD ? `<footer class="q-footer">${aud.on ? audSlot("strip") : ""}</footer>` : `<footer class="q-footer">
       <div class="row left">
+        ${boardButton()}
         ${!revealed && !million ? `<button class="btn btn-ghost" data-action="backToBoard">← Board (Esc)</button>` : ""}
         ${aud.on ? audSlot("strip") : ""}
       </div>
@@ -899,8 +1014,38 @@ function renderQuestion() {
             </div>`
           : `<button class="btn btn-yellow" data-action="reveal">Pencils down — reveal (Space)</button>`
       }
-    </footer>`}
+    </footer>`}`}
   </main>`;
+}
+
+// What the room sees on a player's card: drop-outs before the reveal, results after it.
+function boardChipNote(p) {
+  const c = state.current;
+  const isLive = playerIsLive(p);
+  const cheat = c.cheats[p.id];
+  if (c.phase === "asking") {
+    if (c.drops.includes(p.id)) return `<span class="chip-note">Dropping out · ${money(levelValue(p.level))}</span>`;
+    return isLive ? "" : `<span class="chip-note">bragging rights</span>`;
+  }
+  const result = isLive ? liveResult(p) : c.marks[p.id];
+  let html = "";
+  if (isLive && cheat === "copy") {
+    html = `<span class="chip-note">copied ${esc(classmateName())}</span>${markBadge(result)}`;
+  } else {
+    html = markBadge(c.marks[p.id]);
+    if (isLive && cheat === "save" && c.marks[p.id] === false) {
+      const mate = classmateMark();
+      if (mate === true) html += `<span class="chip-note saved">saved!</span>`;
+      else if (mate === false) html += `<span class="chip-note">save failed</span>`;
+    }
+  }
+  if (!isLive) html += `<span class="chip-note small">for bragging rights</span>`;
+  return html;
+}
+
+function markBadge(value) {
+  if (value === undefined) return "";
+  return value ? `<span class="mark yes on" aria-label="Correct">✓</span>` : `<span class="mark no on" aria-label="Wrong">✗</span>`;
 }
 
 function renderMillionIntro() {
@@ -914,7 +1059,7 @@ function renderMillionIntro() {
     <div class="decisions">
       ${players.map((p) => `<div class="decision"><span class="chip-name">${esc(p.name)}</span><span class="tag">${money(bankOf(p))} on the line</span></div>`).join("")}
     </div>
-    <button class="btn btn-yellow" data-action="startMillion">Show the question (Space)</button>
+    ${IS_BOARD ? "" : `<div class="row">${boardButton()}<button class="btn btn-yellow" data-action="startMillion">Show the question (Space)</button></div>`}
   </main>`;
 }
 
@@ -946,10 +1091,14 @@ function renderResults() {
     </ol>
     <p class="muted small">Ranked by money banked, then by total correct answers.</p>
     ${aud.on ? audSlot("final") : ""}
-    <div class="row">
+    ${
+      IS_BOARD
+        ? ""
+        : `<div class="row">
       <button class="btn btn-ghost" data-action="backToLoader">Pick another episode</button>
       <button class="btn btn-red" data-action="newGame">Play this episode again</button>
-    </div>
+    </div>`
+    }
   </main>`;
 }
 
@@ -965,7 +1114,7 @@ function renderOverlay() {
         <h2>${names} flunked out!</h2>
         <p>The answer was <b>${esc(state.lastAnswer)}</b>.</p>
         <p class="say-it">Now say it to the audience:<br/><span>“I am not smarter than a former 5th grader!”</span></p>
-        <button class="btn btn-yellow" data-action="closeOverlay">Continue (Space)</button>
+        ${IS_BOARD ? "" : `<button class="btn btn-yellow" data-action="closeOverlay">Continue (Space)</button>`}
       </div>
     </div>`;
   }
@@ -994,6 +1143,7 @@ function audienceQuestion() {
 // them, not the whole screen (which would restart a video or close the keyboard).
 const AUD_SLOTS = {
   setup: audSetupCard,
+  boardJoin: audBoardJoin,
   pickerAud: audPickerList,
   corner: audCorner,
   boardLb: audBoardLeaderboard,
@@ -1020,7 +1170,34 @@ function updateAudience() {
     const html = AUD_SLOTS[el.dataset.aud]();
     if (el.innerHTML !== html) el.innerHTML = html;
   }
+  if (!IS_BOARD) send({ type: "aud", aud: audienceView() });
 }
+
+// What the board needs to draw the play-along. Before the reveal, only how many answered.
+function audienceView() {
+  const pid = currentPid();
+  const revealed = !!pid && isRevealed(pid);
+  const stats = pid ? questionStats(pid) : null;
+  return {
+    on: aud.on,
+    status: aud.status,
+    code: aud.code,
+    board: aud.board,
+    join: aud.code ? joinUrl() : "",
+    short: aud.code ? shortUrl() : "",
+    rows: audStandings(),
+    count: playerCount(),
+    pid,
+    revealed,
+    stats: stats && (revealed ? stats : { answered: stats.answered }),
+  };
+}
+
+// The board draws the play-along from what the host sent; the host asks it directly.
+const audRows = () => (IS_BOARD ? audView?.rows || [] : audStandings());
+const audCount = () => (IS_BOARD ? audView?.count || 0 : playerCount());
+const audJoin = () => (IS_BOARD ? audView?.join || "" : joinUrl());
+const audShort = () => (IS_BOARD ? audView?.short || "" : shortUrl());
 
 const qrCache = new Map();
 function qrSvg(text) {
@@ -1051,14 +1228,14 @@ function audSetupCard() {
       <button class="btn btn-yellow" data-action="audOn">Turn on play-along</button>
     </div>`;
   }
-  const rows = audStandings();
+  const rows = audRows();
   return `<div class="aud-card on">
-    <div class="aud-qr">${aud.code && aud.status !== "connecting" ? qrSvg(joinUrl()) : ""}</div>
+    <div class="aud-qr">${aud.code && aud.status !== "connecting" ? qrSvg(audJoin()) : ""}</div>
     <div class="aud-info">
       <h3>📱 Audience play-along <span class="aud-pill ${aud.status}">${audStatusText()}</span></h3>
       ${
         aud.code
-          ? `<p class="aud-code">Room <strong>${esc(aud.code)}</strong></p><p class="small">Scan the code or go to <b>${esc(shortUrl())}</b></p>`
+          ? `<p class="aud-code">Room <strong>${esc(aud.code)}</strong></p><p class="small">Scan the code or go to <b>${esc(audShort())}</b></p>`
           : `<p class="small">Opening a room…</p>`
       }
       ${aud.status === "error" ? `<p class="error">${esc(aud.error)}</p>` : ""}
@@ -1075,12 +1252,26 @@ function audSetupCard() {
 // The room code in the corner of every game screen, so people can join any time.
 function audCorner() {
   if (!aud.on || !["board", "question", "millionIntro"].includes(state.screen)) return "";
-  const n = playerCount();
-  return `<button class="aud-corner" data-action="audBoard" title="Show the play-along leaderboard (0)">
-    <span class="aud-dot ${aud.status}"></span> 📱 Play along: <b>${esc(aud.code || "…")}</b>
-    <span class="aud-corner-url">${esc(aud.code ? shortUrl() : "")}</span>
-    <span class="aud-corner-n">${n} playing</span>
-  </button>`;
+  const n = audCount();
+  const inner = `<span class="aud-dot ${aud.status}"></span> 📱 Play along: <b>${esc(aud.code || "…")}</b>
+    <span class="aud-corner-url">${esc(aud.code ? audShort() : "")}</span>
+    <span class="aud-corner-n">${n} playing</span>`;
+  return IS_BOARD
+    ? `<div class="aud-corner">${inner}</div>`
+    : `<button class="aud-corner" data-action="audBoard" title="Show the play-along leaderboard (0)">${inner}</button>`;
+}
+
+// Board title screen: how to join, big enough to scan from the couch.
+function audBoardJoin() {
+  if (!aud.on || !aud.code) return "";
+  return `<div class="board-join">
+    ${aud.status !== "connecting" ? qrSvg(audJoin()) : ""}
+    <div>
+      <h3>📱 Play along on your phone</h3>
+      <p>Room <strong>${esc(aud.code)}</strong></p>
+      <p class="small">Scan the code or go to <b>${esc(audShort())}</b></p>
+    </div>
+  </div>`;
 }
 
 const subjectTags = (r) =>
@@ -1099,7 +1290,7 @@ function lbRows(rows, max) {
 
 // In the 5th grader picker: the play-along crowd, best first, with what they're good at.
 function audPickerList() {
-  const rows = audStandings();
+  const rows = audRows();
   if (!rows.length) return "";
   const went = (name) => state.pastClassmates.includes(name);
   return `<div class="picker-aud">
@@ -1118,12 +1309,12 @@ function audPickerList() {
 
 function audBoardLeaderboard() {
   if (!aud.on) return "";
-  const rows = audStandings();
+  const rows = audRows();
   return `<div class="aud-lb">
     <h3>📱 Play-along</h3>
     ${
       rows.length
-        ? `<ol class="lb">${lbRows(rows, 6)}</ol>${rows.length > 6 ? `<p class="small">+${rows.length - 6} more · press 0 for the top 10</p>` : ""}`
+        ? `<ol class="lb">${lbRows(rows, 6)}</ol>${rows.length > 6 ? `<p class="small">+${rows.length - 6} more${IS_BOARD ? "" : " · press 0 for the top 10"}</p>` : ""}`
         : `<p class="small">Nobody yet. Join with room <b>${esc(aud.code || "…")}</b>.</p>`
     }
   </div>`;
@@ -1131,27 +1322,27 @@ function audBoardLeaderboard() {
 
 // Under the question: how many phones have answered, and after the reveal, how they did.
 function audStrip() {
-  const pid = currentPid();
+  const pid = IS_BOARD ? audView?.pid : currentPid();
   if (!aud.on || !pid) return "";
-  const st = questionStats(pid);
-  const n = playerCount();
-  if (!isRevealed(pid)) {
+  const st = IS_BOARD ? audView.stats : questionStats(pid);
+  const n = audCount();
+  if (!(IS_BOARD ? audView.revealed : isRevealed(pid))) {
     return `<span class="aud-strip">📱 ${st.answered} of ${n} locked in</span>`;
   }
   return `<span class="aud-strip">📱 ${st.right} of ${st.answered} right${
     st.fastest ? ` · fastest: <b>${esc(st.fastest.name)}</b> +${pts(st.fastest.pts)}` : ""
-  }</span>${st.answered ? `<button class="btn btn-ghost small" data-action="audReview">Check answers</button>` : ""}`;
+  }</span>${st.answered && !IS_BOARD ? `<button class="btn btn-ghost small" data-action="audReview">Check answers</button>` : ""}`;
 }
 
 function audFinal() {
-  const rows = audStandings();
+  const rows = audRows();
   if (!rows.length) return "";
   return `<div class="aud-final"><h3>📱 Play-along leaderboard</h3><ol class="lb">${lbRows(rows, 10)}</ol></div>`;
 }
 
 function audOverlay() {
   if (!aud.on) return "";
-  if (aud.review && currentPid() && isRevealed(currentPid())) {
+  if (aud.review && !IS_BOARD && currentPid() && isRevealed(currentPid())) {
     const groups = answerGroups();
     return `<div class="overlay aud-overlay">
       <div class="overlay-card aud-review">
@@ -1171,7 +1362,7 @@ function audOverlay() {
     </div>`;
   }
   if (aud.board) {
-    const rows = audStandings();
+    const rows = audRows();
     return `<div class="overlay aud-overlay">
       <div class="overlay-card aud-big">
         <div class="aud-big-lb">
@@ -1180,11 +1371,11 @@ function audOverlay() {
           <p class="small muted-ink">Right answers score ${pts(MAX_POINTS)} down to ${pts(MIN_POINTS)}, faster is better (over ${DROP_MS / 1000} seconds).</p>
         </div>
         <div class="aud-big-join">
-          ${aud.code ? qrSvg(joinUrl()) : ""}
+          ${aud.code ? qrSvg(audJoin()) : ""}
           <p>Room <strong>${esc(aud.code || "…")}</strong></p>
-          <p class="small">${esc(aud.code ? shortUrl() : "")}</p>
+          <p class="small">${esc(aud.code ? audShort() : "")}</p>
         </div>
-        <button class="btn btn-yellow" data-action="audClose">Close (0)</button>
+        ${IS_BOARD ? "" : `<button class="btn btn-yellow" data-action="audClose">Close (0)</button>`}
       </div>
     </div>`;
   }
@@ -1196,8 +1387,10 @@ function audOverlay() {
 // ---------------------------------------------------------------------------
 
 document.addEventListener("click", (e) => {
+  if (IS_BOARD && !soundUnlocked) actions.unlockSound(); // any click on the board turns sound on
   const el = e.target.closest("[data-action]");
   if (!el || el.disabled) return;
+  if (IS_BOARD && !["unlockSound", "fullscreen"].includes(el.dataset.action)) return;
   e.preventDefault();
   const fn = actions[el.dataset.action];
   if (fn) fn(el.dataset);
@@ -1214,6 +1407,10 @@ document.addEventListener("change", async (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
+  if (IS_BOARD) {
+    if (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === "f" || e.key === "F")) actions.fullscreen();
+    return;
+  }
   const typing = e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA";
   if (typing) {
     if (e.key === "Enter" && e.target.id === "player-name") {
@@ -1254,7 +1451,64 @@ document.addEventListener("keydown", (e) => {
 // Start
 // ---------------------------------------------------------------------------
 
+function listen() {
+  if (!channel) return;
+  channel.onmessage = ({ data: m }) => {
+    if (IS_BOARD) {
+      if (m.type === "state" || m.type === "aud") {
+        audView = m.aud;
+        Object.assign(aud, { on: m.aud.on, status: m.aud.status, code: m.aud.code, board: m.aud.board, review: false });
+      }
+      if (m.type === "state") {
+        state = m.state;
+        render();
+      } else if (m.type === "aud") {
+        if (aud.on !== renderedAudOn) render();
+        else updateAudience();
+      } else if (m.type === "sound") {
+        if (soundUnlocked) playSound(m.name);
+      } else if (m.type === "stopSound") {
+        stopSound();
+      } else if (m.type === "mute") {
+        setMuted(m.muted);
+      }
+      return;
+    }
+    // Host side: the board says hello when it opens and checks in every couple of seconds.
+    if (m.type === "hello" || m.type === "ping") {
+      const wasOpen = boardOpen();
+      boardSeenAt = Date.now();
+      if (m.type === "hello" || !wasOpen) {
+        stopSound(); // the board takes over the sound
+        send({ type: "mute", muted: isMuted() });
+        if (musicNow) send({ type: "sound", name: musicNow });
+        render(); // sends the current game to the board, and shows the answers here
+      }
+    }
+  };
+}
+
+function initBoard() {
+  document.title = "Are You Smarter Than a Former 5th Grader?";
+  listen();
+  render();
+  send({ type: "hello" });
+  setInterval(() => send({ type: "ping" }), 2000);
+}
+
 async function init() {
+  if (IS_BOARD) return initBoard();
+  document.title = "Smarter Than a 5th Grader · Host";
+  listen();
+  // Notice when the board window is closed.
+  let wasOpen = false;
+  setInterval(() => {
+    if (boardOpen() !== wasOpen) {
+      wasOpen = boardOpen();
+      const typing = ["INPUT", "TEXTAREA"].includes(document.activeElement?.tagName);
+      if (!typing) render();
+    }
+  }, 2000);
   setOnChange(onAudienceChange);
   if (loadAudience()) startAudience();
   try {
