@@ -20,7 +20,7 @@
     {
       "grade": 2,
       "subject": "Grammar",
-      "question": "Which one is a compound word?",
+      "question": "Which of the following is a compound word?",
       "choices": [
         "scarlet",
         "legend",
@@ -47,7 +47,7 @@
     {
       "grade": 3,
       "subject": "U.S. Geography",
-      "question": "Which U.S. state borders exactly one other state?",
+      "question": "Which U.S. state borders only ONE state?",
       "answer": "Maine",
       "note": "Maine borders only New Hampshire. Alaska borders no other state."
     },

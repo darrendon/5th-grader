@@ -36,7 +36,8 @@ const SAFE_AMOUNT = 25000;
 const CHEATS = {
   peek: { label: "Peek", icon: "👀", tip: "Look at the 5th grader's answer, then write your own" },
   copy: { label: "Copy", icon: "📝", tip: "Lock in the 5th grader's answer, right or wrong" },
-  save: { label: "Save", icon: "🛟", tip: "If you're wrong but the 5th grader is right, you're saved" },
+  // Save is used after the reveal, on a player who was marked wrong, like the show applying it automatically.
+  save: { label: "Save", icon: "🛟", tip: "You're wrong, but if the 5th grader is right, you're saved", afterReveal: true },
 };
 const STORE_KEY = "smarter5th.state.v1";
 const CLASSMATE = "__classmate"; // key for the 5th grader's mark when they aren't a player
@@ -323,6 +324,7 @@ const actions = {
     if (c.phase !== "asking" || c.kind === "million") return;
     const p = playerById(id);
     if (isClassmate(p)) return; // the 5th grader can't cheat off themselves
+    if (CHEATS[cheat]?.afterReveal) return; // Save comes after the reveal: see useSave
     if (c.cheats[id] === cheat) {
       // Clicking again undoes a misclick.
       p.cheats[cheat] = true;
@@ -331,6 +333,24 @@ const actions = {
       if (c.cheats[id] || !p.cheats[cheat]) return; // one cheat per question
       p.cheats[cheat] = false;
       c.cheats[id] = cheat;
+    }
+    render();
+  },
+  // After the reveal, a live player marked wrong can spend their Save. It only rescues
+  // them if the 5th grader was right (see liveResult).
+  useSave: ({ id }) => {
+    const c = state.current;
+    if (c.phase !== "revealed" || c.kind === "million") return;
+    const p = playerById(id);
+    if (!p || !playerIsLive(p) || isClassmate(p)) return;
+    if (c.cheats[id] === "save") {
+      // Clicking again undoes a misclick.
+      p.cheats.save = true;
+      delete c.cheats[id];
+    } else {
+      if (c.cheats[id] || !p.cheats.save || c.marks[id] !== false) return; // one cheat per question
+      p.cheats.save = false;
+      c.cheats[id] = "save";
     }
     render();
   },
@@ -352,6 +372,7 @@ const actions = {
     const c = state.current;
     if (c.phase !== "revealed") return;
     c.marks[id] = value === "1";
+    if (value === "1") refundSave(id);
     playSound(value === "1" ? "correct" : "wrong");
     render();
   },
@@ -359,6 +380,7 @@ const actions = {
     const c = state.current;
     for (const p of participants()) {
       if (!(playerIsLive(p) && c.cheats[p.id] === "copy")) c.marks[p.id] = value === "1";
+      if (value === "1") refundSave(p.id);
     }
     if (needsClassmate() && !state.classmate?.playerId) c.marks[CLASSMATE] = value === "1";
     playSound(value === "1" ? "correct" : "wrong");
@@ -435,6 +457,16 @@ const actions = {
   },
   audFlip: ({ key }) => flipAnswers(key),
 };
+
+// A player re-marked right doesn't need their Save: give it back.
+function refundSave(id) {
+  const c = state.current;
+  const p = playerById(id);
+  if (p && c.cheats[id] === "save") {
+    p.cheats.save = true;
+    delete c.cheats[id];
+  }
+}
 
 function finishQuestion() {
   const c = state.current;
@@ -610,7 +642,7 @@ function renderSetup() {
           <li>Pick any subject on the board. Everyone writes down an answer to every question.</li>
           <li>Each right answer moves you up the money ladder. One wrong answer and you flunk out — with ${money(SAFE_AMOUNT)} if you'd already banked it, otherwise nothing.</li>
           <li>After seeing a question you can <b>drop out</b> and keep what you've banked.</li>
-          <li>Every ${QUESTIONS_PER_CLASSMATE} questions, the group picks a new <b>5th grader</b> — a different person each time. They answer too, and everyone else can use their answer: one <b>Peek</b> (look at it), one <b>Copy</b> (lock it in) and one <b>Save</b> (if you're wrong but the 5th grader is right, you're saved) per player, one per question.</li>
+          <li>Every ${QUESTIONS_PER_CLASSMATE} questions, the group picks a new <b>5th grader</b> — a different person each time. They answer too, and everyone else can use their answer: one <b>Peek</b> (look at it), one <b>Copy</b> (lock it in) and one <b>Save</b> (used after the reveal: if you're wrong but the 5th grader is right, you're saved) per player, one per question.</li>
           <li>Survive all ${g.questions.length} and you face the ${money(LADDER[10])} question — no cheats and no walking away. Get it wrong and you leave with ${money(SAFE_AMOUNT)}.</li>
           <li>Players who are out keep answering for bragging rights: most correct answers breaks ties.</li>
         </ul>
@@ -780,6 +812,7 @@ function renderQuestion() {
           controls = `<span class="chip-note">🎒 the 5th grader — no cheats</span><button class="chip-btn drop ${dropping ? "active" : ""}" data-action="toggleDrop" data-id="${p.id}">${dropping ? `Dropping out · ${money(levelValue(p.level))}` : "Drop out"}</button>`;
         } else if (p.status === "in" && !million) {
           const cheatBtns = Object.entries(CHEATS)
+            .filter(([, v]) => !v.afterReveal)
             .map(([k, v]) => {
               const active = cheat === k;
               const disabled = dropping || (!active && (cheat || !p.cheats[k]));
@@ -797,16 +830,22 @@ function renderQuestion() {
         if (isLive && cheat === "copy") {
           controls = `<span class="chip-note">copied ${esc(classmateName())} → ${result === undefined ? `mark ${esc(classmateName())}` : result ? "✓ right" : "✗ wrong"}</span>`;
         } else {
-          const savedNote =
-            isLive && cheat === "save" && c.marks[p.id] === false
-              ? mateMark === undefined
-                ? `<span class="chip-note">🛟 mark ${esc(classmateName())}</span>`
-                : mateMark
-                ? `<span class="chip-note saved">🛟 saved!</span>`
-                : `<span class="chip-note">🛟 save failed</span>`
+          const saving = isLive && cheat === "save" && c.marks[p.id] === false;
+          // Marked wrong with a Save left (and no other cheat this question): offer it.
+          const canSave = isLive && !million && !isClassmate(p) && !cheat && p.cheats.save && c.marks[p.id] === false;
+          const saveBtn =
+            saving || canSave
+              ? `<button class="chip-btn ${saving ? "active" : ""}" title="${CHEATS.save.tip}" data-action="useSave" data-id="${p.id}">${CHEATS.save.icon} ${saving ? "Saving" : "Use Save"}</button>`
               : "";
+          const savedNote = saving
+            ? mateMark === undefined
+              ? `<span class="chip-note">mark ${esc(classmateName())}</span>`
+              : mateMark
+              ? `<span class="chip-note saved">saved!</span>`
+              : `<span class="chip-note">save failed</span>`
+            : "";
           controls = `<button class="mark yes ${c.marks[p.id] === true ? "on" : ""}" data-action="mark" data-id="${p.id}" data-value="1" aria-label="Correct">✓</button>
-            <button class="mark no ${c.marks[p.id] === false ? "on" : ""}" data-action="mark" data-id="${p.id}" data-value="0" aria-label="Wrong">✗</button>${savedNote}`;
+            <button class="mark no ${c.marks[p.id] === false ? "on" : ""}" data-action="mark" data-id="${p.id}" data-value="0" aria-label="Wrong">✗</button>${saveBtn}${savedNote}`;
         }
         if (!isLive) controls += `<span class="chip-note small">for bragging rights</span>`;
       }
